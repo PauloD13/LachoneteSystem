@@ -1,0 +1,35 @@
+# Dependências (Node.js — backend e frontend)
+node_modules/
+
+# Builds e artefatos compilados
+dist/
+build/
+
+# Variáveis de ambiente (nunca versionar segredos/credenciais)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Prisma
+# (o schema.prisma é versionado normalmente; isto ignora só artefatos locais)
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+
+# Cobertura de testes
+coverage/
+
+# Editores / IDEs
+.vscode/
+.idea/
+*.swp
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Volumes/dados locais do Docker (se algum dia forem montados em pasta local)
+docker/data/
