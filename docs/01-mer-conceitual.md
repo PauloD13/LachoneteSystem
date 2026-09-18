@@ -66,61 +66,63 @@ associativas resolvem relacionamentos N:N que carregam atributos próprios.
 | ItemPedido — Adicional | N:N (via ItemPedidoAdicional) | Parcial | Adicional é opcional |
 | Produto — Variacao | 1:N | Parcial | Nem todo produto tem variação |
 
-## 4. Decisões de modelagem em aberto (preciso da sua confirmação)
+## 4. Decisões de modelagem (CONFIRMADAS)
 
 Estas são candidatas às **3 justificativas técnicas obrigatórias** do item 6
-do enunciado — vale a pena já começarmos a documentar o raciocínio.
+do enunciado — o raciocínio abaixo já pode servir de base para a redação
+final dessas justificativas.
 
-1. **Produto x Combo dentro de ItemPedido**: um item de pedido pode se referir
-   a um Produto OU a um Combo. Três formas de resolver:
-   - (a) Duas FKs nulináveis em ItemPedido (`produto_id`, `combo_id`), com
-     regra de "exatamente uma preenchida";
-   - (b) Generalização/especialização: uma entidade `ItemVendavel` (ou
-     `Vendavel`) da qual Produto e Combo herdam, e ItemPedido referencia
-     `ItemVendavel`;
-   - (c) Tratar Combo como um Produto "composto" (um produto especial que
-     também aparece em ComboItem).
-   Eu recomendo **(b)**, por ser mais fiel ao fato de que "o que se vende" é
-   um conceito comum a Produto e Combo (ambos têm preço, ambos aparecem em
-   ItemPedido), evitando FKs nulináveis e facilitando a 3FN. Mas quero sua
-   opinião — isso vira uma das justificativas técnicas.
+1. **Produto x Combo dentro de ItemPedido — CONFIRMADO: opção (b).**
+   Criamos uma entidade supertipo `ItemVendavel` (id, nome, preco, tipo:
+   PRODUTO/COMBO), da qual `Produto` e `Combo` são subtipos (especialização
+   **total e disjunta**: todo ItemVendavel é ou Produto ou Combo, nunca
+   ambos, nunca nenhum). `ItemPedido` referencia sempre `ItemVendavel`,
+   nunca Produto/Combo diretamente. Isso evita FKs nulináveis em
+   ItemPedido, evita regra de "exatamente uma preenchida" em nível de
+   aplicação, e reflete o fato de que "o que se vende" é um conceito comum
+   às duas entidades. No modelo lógico (relacional), essa especialização
+   será implementada como tabela-pai + tabelas-filhas com PK compartilhada
+   (FK de `produto.id` e `combo.id` para `item_vendavel.id`).
 
-2. **Fornecedor — Ingrediente**: o texto diz "um fornecedor pode fornecer
-   vários ingredientes", mas não diz explicitamente se um ingrediente pode
-   ter mais de um fornecedor. Modelei como 1:N (um fornecedor "responsável"
-   por ingrediente, conforme "fornecedor responsável pelo abastecimento").
-   Se quisermos permitir múltiplos fornecedores por ingrediente no futuro,
-   viraria N:N — mas eu ficaria com 1:N por ora, seguindo literalmente a
-   regra de negócio ("um fornecedor responsável").
+2. **Fornecedor — Ingrediente — CONFIRMADO: 1:N.**
+   Um fornecedor fornece vários ingredientes; cada ingrediente tem um único
+   fornecedor responsável pelo abastecimento, seguindo literalmente a regra
+   de negócio. Não modelamos N:N por ausência de evidência textual dessa
+   necessidade (evitar over-engineering).
 
-3. **Cargo como entidade own vs. enum**: modelei Cargo como entidade separada
-   (não como um `ENUM` fixo no banco) porque isso permite adicionar novos
-   cargos sem alterar schema, e porque `FuncionarioCargo` precisa referenciar
-   algo com PK estável para o histórico. Isso também é candidato a
-   justificativa técnica ("por que Cargo virou entidade e não atributo").
+3. **Cargo como entidade — CONFIRMADO.**
+   Cargo é entidade separada (não `ENUM` fixo no banco), pois permite
+   adicionar cargos sem alterar schema e fornece uma PK estável para
+   `FuncionarioCargo` referenciar no histórico.
 
-4. **Preço "congelado" em ItemPedido**: o preço do produto/combo/adicional
-   pode mudar com o tempo (promoções, reajustes). Por isso ItemPedido e
-   ItemPedidoAdicional guardam o preço praticado no momento da venda, e não
-   apenas uma referência ao preço atual do produto — senão pedidos antigos
-   mudariam de valor retroativamente. Isso é um **atributo derivado no
-   sentido inverso**: em vez de calcular, congelamos o valor no momento da
-   transação (prática padrão em sistemas de venda).
+4. **Preço "congelado" em ItemPedido/ItemPedidoAdicional — CONFIRMADO.**
+   O preço do produto/combo/adicional pode mudar com o tempo (promoções,
+   reajustes). ItemPedido e ItemPedidoAdicional guardam o preço praticado
+   no momento da venda, não uma referência ao preço atual — assim pedidos
+   antigos não mudam de valor retroativamente.
 
-5. **StatusPedido**: pode ser modelado como um atributo simples em Pedido
-   (status atual) + a entidade StatusPedidoHistorico (log completo), ou só
-   o histórico (o status atual seria "o último registro do histórico"). Eu
-   recomendo manter **só o histórico** (sem duplicar em Pedido), evitando
-   inconsistência entre os dois — o status atual é sempre derivado via query
-   do último registro. Isso também simplifica a 3FN.
+5. **StatusPedido — CONFIRMADO: apenas histórico, sem duplicar em Pedido.**
+   Não existe atributo `status` em `Pedido`. O status atual é sempre
+   derivado via query do último registro em `StatusPedidoHistorico`,
+   evitando duas fontes de verdade divergentes.
+
+6. **Endereço de entrega: em Cliente ou em Entrega? — CONFIRMADO: nos dois,
+   com propósitos diferentes.**
+   `Cliente` guarda um endereço "padrão" **opcional** (atributo composto:
+   logradouro, número, bairro, cidade, CEP), útil para pré-preencher um
+   novo pedido. `Entrega` guarda seu **próprio** endereço (mesma estrutura
+   composta), que é o endereço efetivamente usado naquela entrega
+   específica — "congelado" no momento do pedido, pela mesma razão do
+   preço: se o cliente se mudar depois, o histórico de entregas antigas não
+   pode ser alterado retroativamente. Também cobre o caso de um cliente
+   pedir entrega em um endereço diferente do cadastrado.
 
 ## 5. Próximos passos
 
-1. Você revisa este rascunho e me diz o que ajustar/discordar;
-2. Fechamos as decisões da seção 4 (viram as justificativas técnicas do
-   item 6 do enunciado);
-3. Eu transformo isso no DER em DBML (dbdiagram.io) com notação Crow's Foot,
-   já com tipos de atributo (simples, composto, multivalorado, derivado,
-   chave) marcados;
-4. Escrevemos o Dicionário de Dados a partir do DER fechado;
-5. Derivamos o Modelo Lógico (DDL) verificando 3FN.
+1. ~~Você revisa este rascunho e me diz o que ajustar/discordar~~ ✅ feito;
+2. ~~Fechamos as decisões da seção 4~~ ✅ feito;
+3. **Próximo:** transformar isso no DER em DBML (dbdiagram.io) com notação
+   Crow's Foot, já com tipos de atributo (simples, composto, multivalorado,
+   derivado, chave) documentados;
+4. Escrever o Dicionário de Dados a partir do DER fechado;
+5. Derivar o Modelo Lógico (DDL) verificando 3FN.
