@@ -31,4 +31,4 @@ if (!parsedEnv.success) {
 }
 
 // 5. Exporta as variáveis validadas (com tipos automáticos do TypeScript)
-export const enviroment = parsedEnv.data;
+export const environment = parsedEnv.data;

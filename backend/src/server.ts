@@ -1,9 +1,9 @@
-import { enviroment } from './config/env.js'
+import { environment } from './config/env.js'
 import app from "./app.js";
 
 //SECTION - Configurando porta (env ou default 3000)
 
-const port = enviroment.PORT
+const port = environment.PORT
 
 //SECTION - Iniciando servidor HTTP
 const server = app.listen(port, () => {
