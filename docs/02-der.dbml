@@ -1,0 +1,255 @@
+// DER — Sistema Lanchonete Sabor & Cia
+// Notação: Crow's Foot (via dbdiagram.io)
+// Cole este arquivo em https://dbdiagram.io para gerar/exportar a imagem/PDF do DER.
+//
+// Convenções:
+// - PK = chave primária | FK = chave estrangeira (ref abaixo de cada tabela)
+// - Atributos compostos (ex.: endereço) são "achatados" em colunas prefixadas
+//   (tratamento padrão ao implementar atributo composto em modelo relacional)
+// - Atributos derivados (ex.: status atual do pedido) NÃO viram coluna aqui —
+//   são calculados via query e documentados no Dicionário de Dados
+// - "tipo" em item_vendavel é o discriminador da especialização total/disjunta
+//   Produto/Combo (decisão de modelagem 1 do docs/01-mer-conceitual.md)
+
+Table cliente {
+  id integer [pk, increment]
+  nome varchar [not null]
+  telefone varchar [not null]
+  email varchar
+  endereco_padrao_logradouro varchar
+  endereco_padrao_numero varchar
+  endereco_padrao_bairro varchar
+  endereco_padrao_cidade varchar
+  endereco_padrao_cep varchar
+  criado_em timestamp [not null, default: `now()`]
+
+  Note: 'Cadastro obrigatório apenas p/ pedidos via app ou delivery (regra aplicada no backend, não no schema). Endereço aqui é só o "padrão" sugerido; o endereço real de cada entrega fica em entrega.*'
+}
+
+Table mesa {
+  id integer [pk, increment]
+  numero integer [not null, unique]
+  ativa boolean [not null, default: true]
+}
+
+Table categoria {
+  id integer [pk, increment]
+  nome varchar [not null, unique]
+}
+
+// --- Especialização total/disjunta: item_vendavel -> produto | combo ---
+
+Table item_vendavel {
+  id integer [pk, increment]
+  nome varchar [not null]
+  preco decimal(10,2) [not null]
+  tipo varchar [not null, note: 'PRODUTO | COMBO — discriminador da especialização']
+
+  Note: 'Supertipo de Produto e Combo. ItemPedido referencia sempre esta tabela, nunca produto/combo diretamente.'
+}
+
+Table produto {
+  id integer [pk, ref: > item_vendavel.id]
+  categoria_id integer [not null, ref: > categoria.id]
+  descricao text
+}
+
+Table combo {
+  id integer [pk, ref: > item_vendavel.id]
+  descricao text
+}
+
+Table combo_item {
+  id integer [pk, increment]
+  combo_id integer [not null, ref: > combo.id]
+  produto_id integer [not null, ref: > produto.id]
+  quantidade integer [not null, default: 1]
+
+  indexes {
+    (combo_id, produto_id) [unique]
+  }
+  Note: 'Associativa N:N — quais produtos compõem cada combo'
+}
+
+Table variacao {
+  id integer [pk, increment]
+  produto_id integer [not null, ref: > produto.id]
+  nome varchar [not null, note: 'ex.: Grande, Ao ponto']
+  preco_adicional decimal(10,2) [not null, default: 0]
+}
+
+Table adicional {
+  id integer [pk, increment]
+  nome varchar [not null]
+  preco decimal(10,2) [not null]
+}
+
+// --- Estoque / ingredientes ---
+
+Table fornecedor {
+  id integer [pk, increment]
+  nome varchar [not null]
+  telefone varchar
+  email varchar
+}
+
+Table ingrediente {
+  id integer [pk, increment]
+  nome varchar [not null]
+  quantidade_estoque decimal(10,3) [not null, default: 0]
+  unidade_medida varchar [not null, note: 'kg | litro | unidade']
+  fornecedor_id integer [not null, ref: > fornecedor.id]
+}
+
+Table produto_ingrediente {
+  id integer [pk, increment]
+  produto_id integer [not null, ref: > produto.id]
+  ingrediente_id integer [not null, ref: > ingrediente.id]
+  quantidade_utilizada decimal(10,3) [not null, note: 'na unidade_medida do ingrediente']
+
+  indexes {
+    (produto_id, ingrediente_id) [unique]
+  }
+  Note: 'Associativa N:N — "ficha técnica": quanto de cada ingrediente cada produto consome'
+}
+
+// --- Equipe ---
+
+Table cargo {
+  id integer [pk, increment]
+  nome varchar [not null, unique, note: 'atendente | cozinheiro | entregador | gerente']
+}
+
+Table funcionario {
+  id integer [pk, increment]
+  nome varchar [not null]
+  telefone varchar
+  email varchar
+}
+
+Table funcionario_cargo {
+  id integer [pk, increment]
+  funcionario_id integer [not null, ref: > funcionario.id]
+  cargo_id integer [not null, ref: > cargo.id]
+  data_inicio date [not null]
+  data_fim date [note: 'NULL = cargo atualmente ativo']
+
+  Note: 'Associativa histórica N:N — um funcionário pode acumular cargos ao longo do tempo'
+}
+
+// --- Promoções e cupons ---
+
+Table promocao {
+  id integer [pk, increment]
+  nome varchar [not null]
+  data_inicio date [not null]
+  data_fim date [not null]
+  tipo_desconto varchar [not null, note: 'VALOR | PERCENTUAL']
+  valor_desconto decimal(10,2) [not null]
+}
+
+Table produto_promocao {
+  id integer [pk, increment]
+  produto_id integer [not null, ref: > produto.id]
+  promocao_id integer [not null, ref: > promocao.id]
+
+  indexes {
+    (produto_id, promocao_id) [unique]
+  }
+  Note: 'Associativa N:N — histórico de quais produtos estiveram em quais promoções'
+}
+
+Table cupom {
+  id integer [pk, increment]
+  codigo varchar [not null, unique]
+  tipo_desconto varchar [not null, note: 'VALOR | PERCENTUAL']
+  valor_desconto decimal(10,2) [not null]
+  data_inicio date [not null]
+  data_fim date [not null]
+}
+
+Table forma_pagamento {
+  id integer [pk, increment]
+  nome varchar [not null, unique, note: 'dinheiro | cartao_debito | cartao_credito | pix | vale_refeicao']
+}
+
+// --- Pedido (núcleo transacional) ---
+
+Table pedido {
+  id integer [pk, increment]
+  data_hora timestamp [not null, default: `now()`]
+  canal varchar [not null, note: 'BALCAO | TELEFONE | APP']
+  cliente_id integer [ref: > cliente.id, note: 'opcional — obrigatório apenas p/ app/delivery (regra de negócio, não constraint de schema)']
+  mesa_id integer [ref: > mesa.id, note: 'opcional — apenas consumo local']
+  atendente_id integer [not null, ref: > funcionario.id]
+  cupom_id integer [ref: > cupom.id]
+  observacoes text
+
+  Note: 'Não tem coluna de status: status atual = último registro em status_pedido_historico (decisão 5)'
+}
+
+Table item_pedido {
+  id integer [pk, increment]
+  pedido_id integer [not null, ref: > pedido.id]
+  item_vendavel_id integer [not null, ref: > item_vendavel.id]
+  variacao_id integer [ref: > variacao.id, note: 'aplicável apenas quando item_vendavel é do tipo PRODUTO']
+  quantidade integer [not null]
+  preco_unitario_praticado decimal(10,2) [not null, note: 'preço "congelado" no momento da venda (decisão 4)']
+  observacao varchar [note: 'ex.: "sem cebola", "sem gelo"']
+}
+
+Table item_pedido_adicional {
+  id integer [pk, increment]
+  item_pedido_id integer [not null, ref: > item_pedido.id]
+  adicional_id integer [not null, ref: > adicional.id]
+  preco_praticado decimal(10,2) [not null, note: 'preço congelado no momento da venda']
+
+  indexes {
+    (item_pedido_id, adicional_id) [unique]
+  }
+  Note: 'Associativa N:N — adicionais escolhidos em cada item do pedido'
+}
+
+Table status_pedido_historico {
+  id integer [pk, increment]
+  pedido_id integer [not null, ref: > pedido.id]
+  status varchar [not null, note: 'RECEBIDO | EM_PREPARO | PRONTO | SAIU_PARA_ENTREGA | ENTREGUE_RETIRADO | CANCELADO']
+  data_hora timestamp [not null, default: `now()`]
+
+  Note: 'Entidade fraca — log completo de mudanças de status; status atual = registro mais recente por pedido_id'
+}
+
+Table pedido_pagamento {
+  id integer [pk, increment]
+  pedido_id integer [not null, ref: > pedido.id]
+  forma_pagamento_id integer [not null, ref: > forma_pagamento.id]
+  valor_pago decimal(10,2) [not null]
+
+  Note: 'Associativa N:N — um pedido pode ser pago com múltiplas formas simultaneamente'
+}
+
+Table entrega {
+  id integer [pk, increment]
+  pedido_id integer [not null, unique, ref: - pedido.id]
+  entregador_id integer [not null, ref: > funcionario.id]
+  endereco_logradouro varchar [not null]
+  endereco_numero varchar [not null]
+  endereco_bairro varchar [not null]
+  endereco_cidade varchar [not null]
+  endereco_cep varchar [not null]
+  taxa_entrega decimal(10,2) [not null]
+  data_hora_saida timestamp
+  data_hora_entrega timestamp
+
+  Note: 'Entidade fraca, 1:1 opcional com pedido — só existe quando o pedido é delivery. Endereço congelado (decisão 6).'
+}
+
+Table avaliacao_pedido {
+  id integer [pk, increment]
+  pedido_id integer [not null, unique, ref: - pedido.id]
+  nota integer [not null, note: '1 a 5']
+  comentario text
+  data_hora timestamp [not null, default: `now()`]
+
+  Note: 'Entidade fraca, 1:1 opcional com pedido — avaliação é opcional'
+}
