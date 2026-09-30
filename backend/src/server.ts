@@ -1,5 +1,6 @@
 import { environment } from './config/env.js'
 import app from "./app.js";
+import { prisma } from "./lib/prisma.js";
 
 //SECTION - Configurando porta (env ou default 3000)
 
@@ -13,11 +14,11 @@ const server = app.listen(port, () => {
 const shutdown = () => {
   console.log('Recebido sinal de encerramento. Desligando com segurança...');
 
-  server.close(() => {
+  server.close(async () => {
     console.log('Servidor HTTP fechado.');
-    
-    // Feche conexões de banco de dados aqui (ex: mongoose.connection.close())
-    
+
+    await prisma.$disconnect();
+
     process.exit(0);
   });
 };
