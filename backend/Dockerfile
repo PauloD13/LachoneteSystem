@@ -14,12 +14,13 @@ WORKDIR /app
 # só porque você alterou uma linha de código.
 COPY package.json package-lock.json ./
 
+# Agora copia o resto do código-fonte (schema.prisma, src/, tsconfig.json).
+COPY . .
+
+
 # Instala TODAS as dependências (incluindo devDependencies — precisa do
 # typescript e do prisma CLI pra compilar e gerar o client agora).
 RUN npm install
-
-# Agora copia o resto do código-fonte (schema.prisma, src/, tsconfig.json).
-COPY . .
 
 # Gera o client do Prisma (precisa do schema.prisma, que já foi copiado).
 RUN npx prisma generate
