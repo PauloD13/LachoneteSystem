@@ -1,0 +1,34 @@
+# Controle de versão e IDEs
+.git
+.gitignore
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Dependências locais e builds
+node_modules/
+vendor/
+venv/
+env/
+dist/
+build/
+target/
+
+# Dados sensíveis e configurações locais
+.env
+*.pem
+*.key
+id_rsa
+credentials.json
+
+# Logs e arquivos temporários
+*.log
+npm-debug.log*
+tmp/
+
+# Documentação e arquivos do próprio Docker
+README.md
+Dockerfile
+docker-compose.yml
+.dockerignore
