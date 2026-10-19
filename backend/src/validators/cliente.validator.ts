@@ -28,18 +28,15 @@ export const criarClienteSchema = z.object({
     .max(100)
     .nullish(),
 
-  // Campos de endereço opcionais (ajuste os nomes se diferirem no seu schema.prisma)
-  logradouro: z.string().trim().max(150).nullish(),
-  numero: z.string().trim().max(20).nullish(),
-  complemento: z.string().trim().max(100).nullish(),
-  bairro: z.string().trim().max(100).nullish(),
-  cidade: z.string().trim().max(100).nullish(),
-  estado: z
-    .string()
-    .trim()
-    .length(2, "Use a sigla do estado com 2 letras (UF).")
-    .nullish(),
-  cep: z.string().trim().max(10).nullish(),
+  // Campos de endereço opcionais — nomes alinhados ao model Cliente do
+  // schema.prisma / database/init/001_schema.sql. "complemento" e "estado"
+  // não existem na tabela cliente (fora do escopo levantado nas regras de
+  // negócio e do dicionário de dados), por isso não entram aqui.
+  enderecoPadraoLogradouro: z.string().trim().max(150).nullish(),
+  enderecoPadraoNumero: z.string().trim().max(10).nullish(),
+  enderecoPadraoBairro: z.string().trim().max(100).nullish(),
+  enderecoPadraoCidade: z.string().trim().max(100).nullish(),
+  enderecoPadraoCep: z.string().trim().max(9).nullish(),
 });
 
 // Schema de atualização parcial (PATCH) — torna todos os campos opcionais

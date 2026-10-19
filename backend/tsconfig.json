@@ -16,8 +16,14 @@
 
     // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    
+    // "exactOptionalPropertyTypes" foi desativado: os tipos gerados pelo
+    // Prisma Client para campos opcionais/nuláveis (ex.: `email?: string | null`)
+    // não são escritos de forma compatível com essa flag — qualquer DTO
+    // validado pelo Zod com campo opcional (`.nullish()`/`.optional()`)
+    // passa a dar erro de tipo ao ser passado para `prisma.<model>.create/update`,
+    // mesmo quando os dados estão corretos. É uma fricção conhecida entre
+    // TypeScript estrito e bibliotecas de terceiros, não um bug de lógica.
+
     // Recommended Options
     "strict": true,
     "jsx": "react-jsx",
