@@ -1,5 +1,8 @@
-import prisma from '../lib/prisma'; // Ajuste para { prisma } caso seu lib/prisma.ts use named export
-import { CriarClienteDTO, AtualizarClienteDTO } from '../validators/cliente.validator';
+import { prisma } from "../lib/prisma.js"; // Ajuste para { prisma } caso seu lib/prisma.ts use named export
+import {
+  CriarClienteDTO,
+  AtualizarClienteDTO,
+} from "../validators/cliente.validator.js";
 
 export async function criar(dados: CriarClienteDTO) {
   return prisma.cliente.create({
@@ -9,7 +12,7 @@ export async function criar(dados: CriarClienteDTO) {
 
 export async function listar() {
   return prisma.cliente.findMany({
-    orderBy: { id: 'asc' },
+    orderBy: { id: "asc" },
   });
 }
 

@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
-import * as clienteService from '../services/cliente.service';
+import { Request, Response } from "express";
+import * as clienteService from "../services/cliente.service.js";
 import {
   criarClienteSchema,
   atualizarClienteSchema,
   clienteIdParamSchema,
-} from '../validators/cliente.validator';
+} from "../validators/cliente.validator.js";
 
 export async function criar(req: Request, res: Response): Promise<void> {
   const dados = criarClienteSchema.parse(req.body);
