@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma.js"; // Ajuste para { prisma } caso seu lib/prisma.ts use named export
-import {
+import type {
   CriarClienteDTO,
   AtualizarClienteDTO,
 } from "../validators/cliente.validator.js";

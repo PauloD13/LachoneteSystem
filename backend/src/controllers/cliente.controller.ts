@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import * as clienteService from "../services/cliente.service.js";
 import {
   criarClienteSchema,
