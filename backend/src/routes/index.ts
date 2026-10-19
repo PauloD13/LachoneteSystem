@@ -1,10 +1,17 @@
-import { Router } from "express";
+import { Router, Request, Response } from 'express';
+import clienteRoutes from './cliente.routes';
 
 const router = Router();
 
-router.get('/health', (req, res) => {
-  console.log("API rodando");
-  res.status(200).json({ status: "OK" }); // É importante enviar uma resposta para o cliente não ficar travado
+// Healthcheck da API
+router.get('/health', (_req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Registro de módulos por prefixo de recurso
+router.use('/clientes', clienteRoutes);
+// Futuros recursos:
+// router.use('/produtos', produtoRoutes);
+// router.use('/pedidos', pedidoRoutes);
 
 export default router;
