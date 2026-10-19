@@ -17,7 +17,6 @@ COPY package.json package-lock.json ./
 # Agora copia o resto do código-fonte (schema.prisma, src/, tsconfig.json).
 COPY . .
 
-
 # Instala TODAS as dependências (incluindo devDependencies — precisa do
 # typescript e do prisma CLI pra compilar e gerar o client agora).
 RUN npm install
@@ -39,15 +38,16 @@ ENV NODE_ENV=production
 
 COPY package.json package-lock.json ./
 
+# Copia do ESTÁGIO ANTERIOR (--from=builder) apenas o que é necessário
+# pra rodar: o JS compilado e o client do Prisma já gerado.
+COPY --from=builder /app/prisma ./prisma
+
 # Instala só as dependências de PRODUÇÃO (sem typescript, tsx, etc — não
 # são necessárias pra rodar o JS já compilado).
 RUN npm install --omit=dev
 
-# Copia do ESTÁGIO ANTERIOR (--from=builder) apenas o que é necessário
-# pra rodar: o JS compilado e o client do Prisma já gerado.
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/prisma ./prisma
 
 # Documenta (não publica de fato — isso é o docker-compose que faz) qual
 # porta a aplicação escuta dentro do container.
