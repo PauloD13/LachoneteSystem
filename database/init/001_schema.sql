@@ -322,3 +322,8 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_combo_set_tipo
     AFTER INSERT ON combo
     FOR EACH ROW EXECUTE FUNCTION fn_set_item_vendavel_tipo_combo();
+
+--
+CREATE UNIQUE INDEX ux_funcionario_cargo_aberto
+    ON funcionario_cargo (funcionario_id, cargo_id)
+    WHERE data_fim IS NULL;
