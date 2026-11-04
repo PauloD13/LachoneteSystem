@@ -37,7 +37,11 @@
    nova tabela.** Ex.: "cupom usado no máximo uma vez por cliente" virou um
    **índice único parcial** (`ux_pedido_cupom_cliente`), não uma tabela de
    controle de uso — o próprio `pedido` já registra cliente + cupom, então
-   criar uma tabela separada seria redundante.
+   criar uma tabela separada seria redundante. Mesma lógica em
+   `ux_funcionario_cargo_aberto` (`funcionario_id, cargo_id` únicos entre os
+   registros com `data_fim IS NULL`): impede abrir o mesmo cargo duas vezes
+   para o mesmo funcionário sem encerrar o anterior, sem impedir o acúmulo
+   de cargos diferentes previsto na regra de negócio 4.5.
 
 ## 2. Verificação das Formas Normais
 
