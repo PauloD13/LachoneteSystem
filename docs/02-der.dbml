@@ -134,7 +134,7 @@ Table funcionario_cargo {
   data_inicio date [not null]
   data_fim date [note: 'NULL = cargo atualmente ativo']
 
-  Note: 'Associativa histórica N:N — um funcionário pode acumular cargos ao longo do tempo'
+  Note: 'Associativa histórica N:N — um funcionário pode acumular cargos ao longo do tempo. Índice único parcial (funcionario_id, cargo_id) WHERE data_fim IS NULL impede abrir o mesmo cargo duas vezes sem encerrar o anterior, sem impedir cargos diferentes simultâneos.'
 }
 
 // --- Promoções e cupons ---

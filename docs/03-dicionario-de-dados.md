@@ -163,6 +163,11 @@ Entidade associativa histórica N:N entre Funcionário e Cargo.
 | data_inicio | DATE | — | — | Sim | Data em que o funcionário passou a exercer esse cargo |
 | data_fim | DATE | — | — | Não | Data em que deixou de exercer esse cargo (NULL = cargo atualmente ativo) |
 
+Restrição: índice único parcial em `(funcionario_id, cargo_id) WHERE data_fim
+IS NULL` — impede abrir o mesmo cargo duas vezes para o mesmo funcionário
+sem encerrar o período anterior, sem impedir que o funcionário acumule
+cargos diferentes simultaneamente (regra de negócio 4.5).
+
 ## promocao
 
 | Atributo | Tipo | Tam./Prec. | Chave | Obrigatório | Descrição |

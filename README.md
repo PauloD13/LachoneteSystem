@@ -121,21 +121,26 @@ Scripts disponíveis no backend:
 
 - ✅ Modelagem de dados e documentação técnica consolidadas;
 - ✅ Schema relacional implementado em SQL;
-- ✅ Backend com base estrutural e módulo de clientes (CRUD + validação);
+- ✅ Backend com CRUD completo de Cliente, Categoria, Produto e Funcionário
+  (validação com Zod, tratamento de erro centralizado, especialização
+  Produto/Combo via transação do Prisma);
+- 🚧 Cargo e FuncionarioCargo (vínculo histórico funcionário↔cargo) em
+  desenvolvimento;
 - 🚧 Frontend ainda em estrutura inicial (pastas base criadas).
 
 ## Endpoints já disponíveis (backend)
 
 - `GET /health`
-- `POST /clientes`
-- `GET /clientes`
-- `GET /clientes/:id`
-- `PATCH /clientes/:id`
-- `DELETE /clientes/:id`
+- `POST /clientes` · `GET /clientes` · `GET /clientes/:id` · `PATCH /clientes/:id` · `DELETE /clientes/:id`
+- `POST /categorias` · `GET /categorias` · `GET /categorias/:id` · `PATCH /categorias/:id` · `DELETE /categorias/:id`
+- `POST /produtos` · `GET /produtos` · `GET /produtos/:id` · `PATCH /produtos/:id` · `DELETE /produtos/:id`
+- `POST /funcionarios` · `GET /funcionarios` · `GET /funcionarios/:id` · `PATCH /funcionarios/:id` · `DELETE /funcionarios/:id`
 
 ## Próximos incrementos sugeridos
 
-- implementar módulos de produtos, pedidos, pagamentos e status;
+- concluir Cargo (CRUD) e FuncionarioCargo (vínculo histórico, como sub-rota
+  de Funcionário);
+- implementar módulos de fornecedor/ingrediente, pedidos, pagamentos e status;
 - adicionar frontend para fluxo completo de pedidos;
 - criar testes automatizados de API;
 - ampliar documentação operacional (ex.: exemplos de payload e fluxo de uso).
