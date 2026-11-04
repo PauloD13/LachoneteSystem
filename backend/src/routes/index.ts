@@ -1,6 +1,8 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import clienteRoutes from "./cliente.routes.js";
+import categoriaRoutes from "./categoria.routes.js";
+//import produtoRoutes from "./produto.routes.js";
 
 const router = Router();
 
@@ -11,8 +13,9 @@ router.get("/health", (_req: Request, res: Response) => {
 
 // Registro de módulos por prefixo de recurso
 router.use("/clientes", clienteRoutes);
+router.use("/categorias", categoriaRoutes);
 // Futuros recursos:
-// router.use('/produtos', produtoRoutes);
+//router.use('/produtos', produtoRoutes);
 // router.use('/pedidos', pedidoRoutes);
 
 export default router;
