@@ -5,26 +5,30 @@ import type {
 } from "../validators/categoria.validator.js";
 
 export async function criar(dados: CriarCategoriaDTO) {
-    return prisma.categoria.create({
-        data: dados,
-    });
-    }
+  return prisma.categoria.create({
+    data: dados,
+  });
+}
+
 export async function listar() {
-    return prisma.categoria.findMany();
+  return prisma.categoria.findMany();
 }
+
 export async function buscarPorId(id: number) {
-    return prisma.categoria.findUnique({
-        where: { id },
-    });
+  return prisma.categoria.findUniqueOrThrow({
+    where: { id },
+  });
 }
+
 export async function atualizar(id: number, dados: AtualizarCategoriaDTO) {
-    return prisma.categoria.update({
-        where: { id },
-        data: dados,
-    });
+  return prisma.categoria.update({
+    where: { id },
+    data: dados,
+  });
 }
+
 export async function remover(id: number) {
-    return prisma.categoria.delete({
-        where: { id },
-    });
+  await prisma.categoria.delete({
+    where: { id },
+  });
 }
