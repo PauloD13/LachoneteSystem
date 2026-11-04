@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import clienteRoutes from "./cliente.routes.js";
 import categoriaRoutes from "./categoria.routes.js";
 import produtoRoutes from "./produto.routes.js";
+import funcionarioRoutes from "./funcionario.routes.js";
 
 const router = Router();
 
@@ -15,6 +16,7 @@ router.get("/health", (_req: Request, res: Response) => {
 router.use("/clientes", clienteRoutes);
 router.use("/categorias", categoriaRoutes);
 router.use("/produtos", produtoRoutes);
+router.use("/funcionarios", funcionarioRoutes);
 // Futuros recursos:
 // router.use('/pedidos', pedidoRoutes);
 
