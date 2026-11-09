@@ -1,37 +1,37 @@
 import type { Request, Response } from "express";
-import * as categoriaService from "../services/categoria.service.js";
+import * as cargoService from "../services/cargo.service.js";
 import {
-  criarCategoriaSchema,
-  atualizarCategoriaSchema,
-  categoriaIdParamSchema,
-} from "../validators/categoria.validator.js";
+  criarCargoSchema,
+  atualizarCargoSchema,
+  cargoIdParamSchema,
+} from "../validators/cargo.validator.js";
 
 export async function criar(req: Request, res: Response): Promise<void> {
-  const dados = criarCategoriaSchema.parse(req.body);
-  const novaCategoria = await categoriaService.criar(dados);
-  res.status(201).json(novaCategoria);
+  const dados = criarCargoSchema.parse(req.body);
+  const novoCargo = await cargoService.criar(dados);
+  res.status(201).json(novoCargo);
 }
 
 export async function listar(_req: Request, res: Response): Promise<void> {
-  const categorias = await categoriaService.listar();
-  res.status(200).json(categorias);
+  const cargos = await cargoService.listar();
+  res.status(200).json(cargos);
 }
 
 export async function buscarPorId(req: Request, res: Response): Promise<void> {
-  const { id } = categoriaIdParamSchema.parse(req.params);
-  const categoria = await categoriaService.buscarPorId(id);
-  res.status(200).json(categoria);
+  const { id } = cargoIdParamSchema.parse(req.params);
+  const cargo = await cargoService.buscarPorId(id);
+  res.status(200).json(cargo);
 }
 
 export async function atualizar(req: Request, res: Response): Promise<void> {
-  const { id } = categoriaIdParamSchema.parse(req.params);
-  const dados = atualizarCategoriaSchema.parse(req.body);
-  const categoriaAtualizada = await categoriaService.atualizar(id, dados);
-  res.status(200).json(categoriaAtualizada);
+  const { id } = cargoIdParamSchema.parse(req.params);
+  const dados = atualizarCargoSchema.parse(req.body);
+  const cargoAtualizado = await cargoService.atualizar(id, dados);
+  res.status(200).json(cargoAtualizado);
 }
 
 export async function remover(req: Request, res: Response): Promise<void> {
-  const { id } = categoriaIdParamSchema.parse(req.params);
-  await categoriaService.remover(id);
+  const { id } = cargoIdParamSchema.parse(req.params);
+  await cargoService.remover(id);
   res.status(204).send();
 }

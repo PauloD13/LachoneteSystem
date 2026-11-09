@@ -1,12 +1,12 @@
 import { Router } from "express";
 import * as cargoController from "../controllers/cargo.controller.js";
 
-const categoriaRoutes = Router();
+const cargoRoutes = Router();
 
-categoriaRoutes.post("/", cargoController.criar);
-categoriaRoutes.get("/", cargoController.listar);
-categoriaRoutes.get("/:id", cargoController.buscarPorId);
-categoriaRoutes.patch("/:id", cargoController.atualizar);
-categoriaRoutes.delete("/:id", cargoController.remover);
+cargoRoutes.post("/", cargoController.criar);
+cargoRoutes.get("/", cargoController.listar);
+cargoRoutes.get("/:id", cargoController.buscarPorId);
+cargoRoutes.patch("/:id", cargoController.atualizar);
+cargoRoutes.delete("/:id", cargoController.remover);
 
-export default categoriaRoutes;
+export default cargoRoutes;

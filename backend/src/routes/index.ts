@@ -4,6 +4,7 @@ import clienteRoutes from "./cliente.routes.js";
 import categoriaRoutes from "./categoria.routes.js";
 import produtoRoutes from "./produto.routes.js";
 import funcionarioRoutes from "./funcionario.routes.js";
+import cargoRoutes from "./cargo.routes.js";
 
 const router = Router();
 
@@ -17,6 +18,7 @@ router.use("/clientes", clienteRoutes);
 router.use("/categorias", categoriaRoutes);
 router.use("/produtos", produtoRoutes);
 router.use("/funcionarios", funcionarioRoutes);
+router.use("/cargos", cargoRoutes);
 // Futuros recursos:
 // router.use('/pedidos', pedidoRoutes);
 
