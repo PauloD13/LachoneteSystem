@@ -121,11 +121,12 @@ Scripts disponíveis no backend:
 
 - ✅ Modelagem de dados e documentação técnica consolidadas;
 - ✅ Schema relacional implementado em SQL;
-- ✅ Backend com CRUD completo de Cliente, Categoria, Produto e Funcionário
-  (validação com Zod, tratamento de erro centralizado, especialização
+- ✅ Backend com CRUD completo de Cliente, Categoria, Produto, Funcionário e
+  Cargo (validação com Zod, tratamento de erro centralizado, especialização
   Produto/Combo via transação do Prisma);
-- 🚧 Cargo e FuncionarioCargo (vínculo histórico funcionário↔cargo) em
-  desenvolvimento;
+- ✅ FuncionarioCargo — vínculo histórico funcionário↔cargo, como sub-rota
+  de Funcionário (índice único parcial impede dois cargos iguais abertos
+  simultaneamente; permite acumular cargos diferentes);
 - 🚧 Frontend ainda em estrutura inicial (pastas base criadas).
 
 ## Endpoints já disponíveis (backend)
@@ -135,11 +136,11 @@ Scripts disponíveis no backend:
 - `POST /categorias` · `GET /categorias` · `GET /categorias/:id` · `PATCH /categorias/:id` · `DELETE /categorias/:id`
 - `POST /produtos` · `GET /produtos` · `GET /produtos/:id` · `PATCH /produtos/:id` · `DELETE /produtos/:id`
 - `POST /funcionarios` · `GET /funcionarios` · `GET /funcionarios/:id` · `PATCH /funcionarios/:id` · `DELETE /funcionarios/:id`
+- `POST /cargos` · `GET /cargos` · `GET /cargos/:id` · `PATCH /cargos/:id` · `DELETE /cargos/:id`
+- `POST /funcionarios/:funcionarioId/cargos` (abre vínculo) · `GET /funcionarios/:funcionarioId/cargos` (histórico) · `PATCH /funcionarios/:funcionarioId/cargos/:vinculoId` (encerra vínculo)
 
 ## Próximos incrementos sugeridos
 
-- concluir Cargo (CRUD) e FuncionarioCargo (vínculo histórico, como sub-rota
-  de Funcionário);
 - implementar módulos de fornecedor/ingrediente, pedidos, pagamentos e status;
 - adicionar frontend para fluxo completo de pedidos;
 - criar testes automatizados de API;

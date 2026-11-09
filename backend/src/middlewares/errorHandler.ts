@@ -46,10 +46,26 @@ export function errorHandler(
         });
         return;
       }
+
     }
   }
 
-  // 3. Qualquer outro erro não esperado -> Loga no servidor e responde 500 genérico
+  // 3. Violação de CHECK constraint (ex.: data_fim >= data_inicio em
+  // funcionario_cargo). Testado na prática: isso NÃO chega como
+  // PrismaClientKnownRequestError com um código "P2xxx" — chega como
+  // PrismaClientUnknownRequestError, com o erro bruto do Postgres
+  // (SQLSTATE 23514 = check_violation) dentro da mensagem.
+  if (
+    err instanceof Prisma.PrismaClientUnknownRequestError &&
+    err.message.includes("violates check constraint")
+  ) {
+    res.status(400).json({
+      error: "Dados inválidos: violam uma restrição do banco de dados.",
+    });
+    return;
+  }
+
+  // 4. Qualquer outro erro não esperado -> Loga no servidor e responde 500 genérico
   console.error("[Unhandled Error]:", err);
   res.status(500).json({
     error: "Erro interno do servidor.",
