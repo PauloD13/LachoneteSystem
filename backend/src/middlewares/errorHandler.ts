@@ -1,6 +1,12 @@
 import type { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
+import { AppError } from "../lib/appError.js";
+
+// Rota inexistente: responde JSON (o padrão do Express seria uma página HTML).
+export function rotaNaoEncontrada(_req: Request, res: Response): void {
+  res.status(404).json({ error: "Rota não encontrada." });
+}
 
 export function errorHandler(
   err: unknown,
@@ -17,7 +23,26 @@ export function errorHandler(
     return;
   }
 
-  // 2. Erros conhecidos do Prisma
+  // 2. Regra de negócio violada (lançada pelos services)
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({ error: err.message });
+    return;
+  }
+
+  // 3. Erros do próprio Express ao ler o corpo (JSON malformado, corpo grande
+  // demais). São erros do cliente: sem este bloco cairiam no 500 genérico.
+  if (err instanceof Error && "type" in err) {
+    if (err.type === "entity.parse.failed") {
+      res.status(400).json({ error: "JSON inválido no corpo da requisição." });
+      return;
+    }
+    if (err.type === "entity.too.large") {
+      res.status(413).json({ error: "Corpo da requisição grande demais." });
+      return;
+    }
+  }
+
+  // 4. Erros conhecidos do Prisma
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     switch (err.code) {
       case "P2002": {
@@ -38,19 +63,29 @@ export function errorHandler(
         return;
       }
 
+      // P2003 acontece nos dois sentidos: apontar para um registro que não
+      // existe, ou remover um registro que ainda é referenciado.
       case "P2003": {
         res.status(409).json({
           error:
-            "Operação bloqueada por violação de chave estrangeira (existem registros vinculados).",
+            "Violação de chave estrangeira: o registro referenciado não existe ou ainda há registros vinculados a este.",
           code: err.code,
         });
         return;
       }
 
+      // Valor maior que a coluna comporta (texto longo demais).
+      case "P2000": {
+        res.status(400).json({
+          error: "Valor maior que o tamanho permitido para o campo.",
+          code: err.code,
+        });
+        return;
+      }
     }
   }
 
-  // 3. Violação de CHECK constraint (ex.: data_fim >= data_inicio em
+  // 5. Violação de CHECK constraint (ex.: data_fim >= data_inicio em
   // funcionario_cargo). Testado na prática: isso NÃO chega como
   // PrismaClientKnownRequestError com um código "P2xxx" — chega como
   // PrismaClientUnknownRequestError, com o erro bruto do Postgres
@@ -65,7 +100,7 @@ export function errorHandler(
     return;
   }
 
-  // 4. Qualquer outro erro não esperado -> Loga no servidor e responde 500 genérico
+  // 6. Qualquer outro erro não esperado -> Loga no servidor e responde 500 genérico
   console.error("[Unhandled Error]:", err);
   res.status(500).json({
     error: "Erro interno do servidor.",

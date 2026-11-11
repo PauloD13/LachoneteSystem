@@ -22,6 +22,22 @@ const enviromentSchema = z.object({
       // Caso contrário, divide por vírgula e remove espaços extras
       return val.split(",").map((url) => url.trim());
     }),
+  // Fuso do negócio: define o que é "hoje" para validade de promoções e
+  // cupons e para os períodos dos relatórios (o container roda em UTC).
+  APP_TIMEZONE: z
+    .string()
+    .default("America/Sao_Paulo")
+    .refine(
+      (fuso) => {
+        try {
+          new Intl.DateTimeFormat("en-US", { timeZone: fuso });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "APP_TIMEZONE não é um fuso horário IANA válido" },
+    ),
 });
 
 const parsedEnv = enviromentSchema.safeParse(process.env);
