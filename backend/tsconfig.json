@@ -34,5 +34,8 @@
     "skipLibCheck": true,
 
     "esModuleInterop": true,
-  }
+  },
+  // Só o código da aplicação é compilado para dist/. Os testes (tests/) rodam
+  // direto pelo tsx e não entram no build.
+  "include": ["src"]
 }
