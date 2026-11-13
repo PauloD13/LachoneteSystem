@@ -24,15 +24,27 @@
 4. **Entidade fraca vira tabela com FK obrigatória (`NOT NULL`) e
    `ON DELETE CASCADE`** para a entidade da qual depende — reflete que ela
    não tem existência própria (ex.: `item_pedido`, `status_pedido_historico`
-   somem se o `pedido` for excluído).
+   somem se o `pedido` for excluído). **Exceção deliberada:**
+   `funcionario_cargo.funcionario_id` é `ON DELETE RESTRICT` — a tabela é um
+   registro *histórico*, e apagar o funcionário não pode apagar a história
+   junto (funcionário desligado é desativado, coluna `ativo`).
 5. **Especialização total/disjunta (Produto/Combo) vira tabela-pai +
    tabelas-filha com PK compartilhada** (`produto.id` e `combo.id`
    referenciam `item_vendavel.id`). A integridade "todo item_vendavel tem
    exatamente um filho, do tipo certo" não é expressável em `CHECK` puro
    (SQL padrão não permite `CHECK` consultar outra tabela), então foi
-   implementada com **triggers** (`fn_set_item_vendavel_tipo_produto` /
-   `_combo`, ao final do script) — este é um ponto técnico interessante para
-   a justificativa oral do projeto.
+   implementada com **triggers**, ao final do script:
+   - `fn_set_item_vendavel_tipo_produto` / `_combo` ajustam o discriminador
+     `tipo` quando a linha-filha é criada;
+   - `fn_verificar_especializacao` confere que o item existe em **exatamente
+     uma** das filhas e que `tipo` bate. É um *constraint trigger*
+     `DEFERRABLE INITIALLY DEFERRED`: roda no `COMMIT`, não a cada comando.
+     Precisa ser assim porque o cadastro tem dois passos (insere o pai,
+     depois o filho) — no meio da transação o pai está legitimamente "sem
+     filho"; só é erro se a transação **terminar** assim.
+
+   Este é um ponto técnico interessante para a justificativa oral do
+   projeto: mostra a diferença entre restrição imediata e restrição adiada.
 6. **Regras de negócio que não são "estruturais" viram `CHECK`/índice, não
    nova tabela.** Ex.: "cupom usado no máximo uma vez por cliente" virou um
    **índice único parcial** (`ux_pedido_cupom_cliente`), não uma tabela de
@@ -42,6 +54,24 @@
    registros com `data_fim IS NULL`): impede abrir o mesmo cargo duas vezes
    para o mesmo funcionário sem encerrar o anterior, sem impedir o acúmulo
    de cargos diferentes previsto na regra de negócio 4.5.
+7. **Atributo derivado que precisa ser consultado com frequência é
+   materializado — e mantido pelo banco, não pela aplicação.** É o caso de
+   `pedido.status_atual` (decisão 5, revisada): a fonte da verdade continua
+   sendo `status_pedido_historico`; um trigger copia para `pedido` o status
+   de cada linha nova do histórico, outro cria a linha inicial `RECEBIDO`
+   junto com o pedido, um terceiro recusa escrita direta em `status_atual`
+   e um quarto torna o histórico somente-inserção. Com esse ciclo fechado
+   dentro do banco, nenhum caminho de escrita (API, script, `psql`) consegue
+   deixar as duas informações diferentes.
+8. **Instantes usam `TIMESTAMPTZ`; datas de calendário usam `DATE`.**
+   `TIMESTAMP` (sem fuso) grava "o que o relógio marcava", e o significado
+   do valor passa a depender do fuso de quem gravou — o servidor em UTC e
+   um `DEFAULT now()` em outra sessão produziriam horários incompatíveis na
+   mesma coluna. `TIMESTAMPTZ` grava o instante absoluto.
+9. **Toda chave estrangeira tem índice.** O PostgreSQL indexa
+   automaticamente `PRIMARY KEY` e `UNIQUE`, mas não as FKs. Sem índice,
+   cada junção pelo lado "N" e cada verificação de `ON DELETE RESTRICT`
+   percorre a tabela filha inteira.
 
 ## 2. Verificação das Formas Normais
 
@@ -84,7 +114,27 @@ tabela; os pontos que mereciam atenção especial:
   sistema de vendas (o preço "atual" e o preço "praticado numa venda
   específica" são dois fatos diferentes, não o mesmo dado duplicado).
 
-Conclusão: o esquema está em **3ª Forma Normal**.
+- **Caso especial, redundância controlada:** `pedido.status_atual` repete
+  uma informação que pode ser obtida de `status_pedido_historico`. Vale
+  separar duas perguntas:
+  - *Viola a 3FN?* Não. As formas normais tratam de dependências funcionais
+    **dentro de uma relação**. Em `pedido`, `status_atual` depende da chave
+    (`id`) e de mais nada: não há dependência parcial nem transitiva por
+    outro atributo não-chave.
+  - *É redundância?* É — entre tabelas. É uma **desnormalização
+    deliberada** (atributo derivado materializado), feita por desempenho. O
+    problema que a normalização existe para evitar é a **anomalia de
+    atualização** (os dois lugares discordarem); aqui ela é impedida pelos
+    triggers descritos na regra 7 da seção 1, de modo que a redundância não
+    pode ficar inconsistente. O custo e o ganho estão na justificativa 3 de
+    `05-justificativas-tecnicas.md`.
+- `funcionario.login` / `funcionario.senha_hash` dependem apenas do
+  funcionário (cada funcionário tem no máximo uma credencial), por isso
+  ficam na própria tabela, sem violar a 3FN. As permissões **não** são
+  armazenadas — derivam de `funcionario_cargo`.
+
+Conclusão: o esquema está em **3ª Forma Normal**, com uma redundância
+controlada e documentada (`pedido.status_atual`).
 
 ## 3. Notação relacional (visão compacta)
 
@@ -96,7 +146,7 @@ mesa(id, numero, ativa)
 
 categoria(id, nome)
 
-item_vendavel(id, nome, preco, tipo)
+item_vendavel(id, nome, preco, tipo, ativo)
 
 produto(id*, categoria_id→categoria, descricao)                          -- id também é FK p/ item_vendavel
 combo(id*, descricao)                                                     -- id também é FK p/ item_vendavel
@@ -105,7 +155,7 @@ combo_item(id, combo_id→combo, produto_id→produto, quantidade)
 
 variacao(id, produto_id→produto, nome, preco_adicional)
 
-adicional(id, nome, preco)
+adicional(id, nome, preco, ativo)
 
 fornecedor(id, nome, telefone, email)
 
@@ -115,7 +165,7 @@ produto_ingrediente(id, produto_id→produto, ingrediente_id→ingrediente, quan
 
 cargo(id, nome)
 
-funcionario(id, nome, telefone, email)
+funcionario(id, nome, telefone, email, ativo, login, senha_hash)
 
 funcionario_cargo(id, funcionario_id→funcionario, cargo_id→cargo, data_inicio, data_fim)
 
@@ -128,7 +178,8 @@ cupom(id, codigo, tipo_desconto, valor_desconto, data_inicio, data_fim)
 forma_pagamento(id, nome)
 
 pedido(id, data_hora, canal, cliente_id→cliente, mesa_id→mesa,
-       atendente_id→funcionario, cupom_id→cupom, observacoes)
+       atendente_id→funcionario, cupom_id→cupom, observacoes,
+       status_atual)                                                      -- derivado, mantido por trigger
 
 item_pedido(id, pedido_id→pedido, item_vendavel_id→item_vendavel, variacao_id→variacao,
             quantidade, preco_unitario_praticado, observacao)
@@ -137,7 +188,8 @@ item_pedido_adicional(id, item_pedido_id→item_pedido, adicional_id→adicional
 
 status_pedido_historico(id, pedido_id→pedido, status, data_hora)
 
-pedido_pagamento(id, pedido_id→pedido, forma_pagamento_id→forma_pagamento, valor_pago)
+pedido_pagamento(id, pedido_id→pedido, forma_pagamento_id→forma_pagamento, valor_pago,
+                 estornado_em)
 
 entrega(id, pedido_id→pedido, entregador_id→funcionario, endereco_logradouro,
         endereco_numero, endereco_bairro, endereco_cidade, endereco_cep,
@@ -151,10 +203,25 @@ PK compartilhada).
 
 ## 4. Como executar o script
 
-O arquivo `database/init/001_schema.sql` é autocontido e idempotente na
-ordem de criação (respeita dependências de FK). Quando o container de banco
-subir via Docker Compose, qualquer `.sql` em `database/init/` é executado
-automaticamente pela imagem oficial do Postgres na primeira inicialização
-do volume — vamos aproveitar exatamente esse mecanismo no deploy (seção
-5.4 do enunciado). Não é necessário rodar nada manualmente agora; isso será
-testado quando montarmos o `docker-compose.yml`.
+A pasta `database/init/` tem dois scripts, executados em ordem alfabética:
+
+1. `001_schema.sql` — tabelas, restrições, índices e triggers (autocontido,
+   respeita a ordem das dependências de FK);
+2. `002_seed.sql` — os domínios fixados pelo enunciado, sem os quais o
+   sistema não opera: cargos (atendente, cozinheiro, entregador, gerente),
+   formas de pagamento e categorias do cardápio.
+
+Quando o container de banco sobe via Docker Compose, a imagem oficial do
+Postgres executa automaticamente os `.sql` dessa pasta **na primeira
+inicialização do volume** (seção 5.4 do enunciado). Consequência prática:
+depois de alterar um desses scripts, um ambiente que já subiu antes só
+recebe a versão nova se o volume for recriado:
+
+```bash
+docker compose down -v   # apaga os dados do banco!
+docker compose up --build
+```
+
+O primeiro usuário do sistema (gerente) não está no seed: a senha precisa
+passar pela função de hash da aplicação, então é o backend que o cria na
+primeira subida, a partir das variáveis `ADMIN_LOGIN` / `ADMIN_SENHA`.

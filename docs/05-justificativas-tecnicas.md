@@ -44,9 +44,19 @@ reconhece explicitamente que Produto e Combo compartilham um conceito real
 do domínio — "coisa que pode ser vendida, com nome e preço próprios" — e
 resolve a referência de `ItemPedido` com uma única FK não-nula. O custo é
 implementar a especialização via chave primária compartilhada entre tabelas
-(`produto.id` e `combo.id` referenciam `item_vendavel.id`) mais dois
-triggers que mantêm `item_vendavel.tipo` consistente — uma técnica padrão
-de modelagem relacional para representar herança.
+(`produto.id` e `combo.id` referenciam `item_vendavel.id`) mais triggers —
+uma técnica padrão de modelagem relacional para representar herança.
+
+**Como o banco garante "total e disjunta":** a chave compartilhada sozinha
+não garante nenhuma das duas propriedades — nada impediria um
+`item_vendavel` sem linha-filha (não seria *total*) ou com o mesmo `id` em
+`produto` **e** em `combo` (não seria *disjunta*). Um `CHECK` não resolve,
+porque não enxerga outras tabelas. A garantia vem de um *constraint
+trigger* adiado (`fn_verificar_especializacao`), que no `COMMIT` confere
+que cada item tocado na transação existe em exatamente uma das filhas e que
+`tipo` indica a filha certa. Ser adiado é essencial: o cadastro insere
+primeiro o pai e depois o filho, então durante a transação o pai fica
+momentaneamente sem filho — o que só é erro se continuar assim no final.
 
 ## 3. Status do pedido virou entidade fraca de histórico, não atributo
 
@@ -55,9 +65,9 @@ do tempo... A proprietária quer conseguir consultar, depois, em que horário
 cada mudança de status ocorreu, e não apenas o status atual."
 
 **Decisão:** `StatusPedidoHistorico` é uma entidade fraca, dependente de
-`Pedido`, que registra **cada** mudança de status com seu horário. `Pedido`
-não tem coluna de status — o status atual é sempre derivado (último
-registro do histórico, ordenado por `data_hora`).
+`Pedido`, que registra **cada** mudança de status com seu horário — e é a
+**única fonte da verdade** sobre o status. O status atual é um atributo
+**derivado**: o do registro mais recente do histórico.
 
 **Por quê:** um atributo simples `status` em `Pedido` só guardaria o valor
 mais recente, descartando o histórico que é requisito explícito da regra de
@@ -66,11 +76,39 @@ não resolve um relacionamento N:N entre duas entidades fortes — ela existe
 para registrar **eventos que só fazem sentido em função de um pedido
 específico**, sua chave primária depende logicamente da existência do
 pedido, e ela desaparece se o pedido for removido (`ON DELETE CASCADE`).
-Manter também uma coluna `status` redundante em `Pedido` foi descartado
-deliberadamente: duplicar o dado (uma vez no histórico, outra vez "solto"
-em Pedido) criaria duas fontes de verdade que poderiam divergir se alguma
-rotina esquecesse de atualizar uma das duas — o que violaria a lógica da
-3FN de eliminar redundância que gera risco de inconsistência.
+
+**Revisão — o derivado passou a ser materializado.** Na primeira versão do
+modelo, uma coluna de status em `Pedido` foi descartada com um argumento
+correto: duplicar o dado (uma vez no histórico, outra "solto" em Pedido)
+cria duas fontes de verdade, que divergem no dia em que alguma rotina
+esquece de atualizar uma delas. A revisão do sistema pronto mostrou o outro
+lado: a consulta mais frequente da operação — "quais pedidos estão em
+preparo agora?", a tela da cozinha — precisava descobrir o último status de
+**cada** pedido já registrado para então filtrar. O custo cresce com todo o
+histórico da lanchonete, para responder sobre meia dúzia de pedidos.
+
+A solução adotada mantém o argumento original e remove o custo:
+`pedido.status_atual` existe, mas **a aplicação nunca escreve nela**.
+
+| Garantia | Mecanismo no banco |
+| --- | --- |
+| Todo pedido nasce com a linha `RECEBIDO` no histórico | trigger `trg_pedido_status_inicial` |
+| Cada linha nova do histórico atualiza `pedido.status_atual` | trigger `trg_status_historico_atualiza_pedido` |
+| Ninguém altera `status_atual` por fora do histórico | trigger `trg_pedido_protege_status_atual` |
+| O histórico não é corrigido nem apagado (somente-inserção) | trigger `trg_status_historico_somente_insercao` |
+
+O risco apontado na decisão original era "alguma rotina esquecer de
+atualizar uma das duas". Com o ciclo fechado dentro do banco não existe
+rotina que possa esquecer: qualquer caminho de escrita — API, script,
+`psql` — passa pelos mesmos triggers. A coluna continua sendo redundância
+(desnormalização deliberada de um atributo derivado), mas uma redundância
+que **não consegue ficar inconsistente**; e `pedido` permanece em 3FN,
+porque `status_atual` depende apenas da chave do pedido (ver
+`04-modelo-logico.md`, seção 2).
+
+*Trade-off assumido:* quatro triggers a mais para manter e explicar, e uma
+escrita extra em `pedido` a cada mudança de status — em troca de a consulta
+por status virar uma busca no índice `(status_atual, data_hora)`.
 
 ## 4. Ficha técnica (Produto x Ingrediente) como N:N com atributo próprio
 
