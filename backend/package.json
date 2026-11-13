@@ -9,6 +9,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
+    "test:e2e": "node --import tsx --test --test-reporter=spec \"tests/e2e/*.test.ts\"",
     "postinstall": "prisma generate"
   },
   "keywords": [],

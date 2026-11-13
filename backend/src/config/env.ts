@@ -2,7 +2,9 @@ import { randomBytes } from "node:crypto";
 import * as dotenv from "dotenv";
 import { z } from "zod";
 
-dotenv.config();
+// quiet: sem a linha de aviso do dotenv, que quebraria o "uma linha JSON por
+// evento" do log de produção.
+dotenv.config({ quiet: true });
 
 // Variável definida mas vazia (ex.: `ADMIN_LOGIN=` no .env, ou
 // `${ADMIN_LOGIN:-}` no docker-compose) vale como "não definida".
