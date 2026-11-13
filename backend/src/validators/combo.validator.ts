@@ -28,6 +28,8 @@ export const criarComboSchema = z.object({
     .max(150, "O nome deve ter no máximo 150 caracteres."),
   preco: dinheiro.positive("O preço deve ser maior que zero."),
   descricao: z.string().trim().max(1000).nullish(),
+  // false = fora do cardápio, sem perder o histórico de vendas.
+  ativo: z.boolean().optional(),
   itens: itensDoComboSchema,
 });
 

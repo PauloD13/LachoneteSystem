@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { idNoCorpo, quantidadeDecimal } from "./comum.js";
+import {
+  idNaUrl,
+  idNoCorpo,
+  paginacaoQuerySchema,
+  quantidadeDecimal,
+} from "./comum.js";
 
 export const criarIngredienteSchema = z.object({
   nome: z
@@ -16,7 +21,14 @@ export const criarIngredienteSchema = z.object({
 
 export const atualizarIngredienteSchema = criarIngredienteSchema.partial();
 
+export const listarIngredientesQuerySchema = paginacaoQuerySchema.extend({
+  fornecedorId: idNaUrl.optional(),
+});
+
 export type CriarIngredienteDTO = z.infer<typeof criarIngredienteSchema>;
 export type AtualizarIngredienteDTO = z.infer<
   typeof atualizarIngredienteSchema
+>;
+export type ListarIngredientesQuery = z.infer<
+  typeof listarIngredientesQuerySchema
 >;

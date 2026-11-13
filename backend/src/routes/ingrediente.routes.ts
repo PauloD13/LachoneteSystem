@@ -1,12 +1,14 @@
 import { Router } from "express";
 import * as ingredienteController from "../controllers/ingrediente.controller.js";
+import { soGerente } from "../middlewares/autenticacao.js";
 
 const ingredienteRoutes = Router();
 
-ingredienteRoutes.post("/", ingredienteController.criar);
+// Consulta: qualquer funcionário logado. Alteração: só gerente.
 ingredienteRoutes.get("/", ingredienteController.listar);
 ingredienteRoutes.get("/:id", ingredienteController.buscarPorId);
-ingredienteRoutes.patch("/:id", ingredienteController.atualizar);
-ingredienteRoutes.delete("/:id", ingredienteController.remover);
+ingredienteRoutes.post("/", soGerente, ingredienteController.criar);
+ingredienteRoutes.patch("/:id", soGerente, ingredienteController.atualizar);
+ingredienteRoutes.delete("/:id", soGerente, ingredienteController.remover);
 
 export default ingredienteRoutes;

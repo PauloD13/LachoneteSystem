@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { INT4_MAX } from "./comum.js";
+import { booleanoNaUrl, INT4_MAX, paginacaoQuerySchema } from "./comum.js";
 
 export const criarMesaSchema = z.object({
   numero: z
@@ -12,5 +12,10 @@ export const criarMesaSchema = z.object({
 
 export const atualizarMesaSchema = criarMesaSchema.partial();
 
+export const listarMesasQuerySchema = paginacaoQuerySchema.extend({
+  ativa: booleanoNaUrl.optional(),
+});
+
 export type CriarMesaDTO = z.infer<typeof criarMesaSchema>;
 export type AtualizarMesaDTO = z.infer<typeof atualizarMesaSchema>;
+export type ListarMesasQuery = z.infer<typeof listarMesasQuerySchema>;

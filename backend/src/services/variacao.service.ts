@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js";
+import { removerOuExplicar } from "../lib/remocao.js";
 import type {
   CriarVariacaoDTO,
   AtualizarVariacaoDTO,
@@ -40,5 +41,8 @@ export async function atualizar(
 }
 
 export async function remover(produtoId: number, variacaoId: number) {
-  await prisma.variacao.delete({ where: { id: variacaoId, produtoId } });
+  await removerOuExplicar(
+    () => prisma.variacao.delete({ where: { id: variacaoId, produtoId } }),
+    "Variação já vendida em pedidos não pode ser removida.",
+  );
 }

@@ -1,4 +1,7 @@
 import { prisma } from "../lib/prisma.js";
+import { paginar, recorte } from "../lib/paginacao.js";
+import { removerOuExplicar } from "../lib/remocao.js";
+import type { PaginacaoQuery } from "../validators/comum.js";
 import type {
   CriarCategoriaDTO,
   AtualizarCategoriaDTO,
@@ -10,8 +13,15 @@ export async function criar(dados: CriarCategoriaDTO) {
   });
 }
 
-export async function listar() {
-  return prisma.categoria.findMany();
+export async function listar(pagina: PaginacaoQuery) {
+  const [dados, total] = await prisma.$transaction([
+    prisma.categoria.findMany({
+      orderBy: [{ nome: "asc" }, { id: "asc" }],
+      ...recorte(pagina),
+    }),
+    prisma.categoria.count(),
+  ]);
+  return paginar(dados, total, pagina);
 }
 
 export async function buscarPorId(id: number) {
@@ -28,7 +38,8 @@ export async function atualizar(id: number, dados: AtualizarCategoriaDTO) {
 }
 
 export async function remover(id: number) {
-  await prisma.categoria.delete({
-    where: { id },
-  });
+  await removerOuExplicar(
+    () => prisma.categoria.delete({ where: { id } }),
+    "Categoria com produtos cadastrados não pode ser removida. Mova os produtos para outra categoria antes.",
+  );
 }

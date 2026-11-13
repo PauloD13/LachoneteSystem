@@ -13,8 +13,8 @@ export async function criar(req: Request, res: Response): Promise<void> {
 }
 
 export async function listar(req: Request, res: Response): Promise<void> {
-  const { ativaEm } = listarPromocoesQuerySchema.parse(req.query);
-  res.status(200).json(await promocaoService.listar(ativaEm));
+  const filtros = listarPromocoesQuerySchema.parse(req.query);
+  res.status(200).json(await promocaoService.listar(filtros));
 }
 
 export async function buscarPorId(req: Request, res: Response): Promise<void> {

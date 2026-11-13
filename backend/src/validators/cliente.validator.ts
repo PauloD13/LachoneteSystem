@@ -1,21 +1,14 @@
 import { z } from "zod";
+import { paginacaoQuerySchema } from "./comum.js";
 
-// Validação do parâmetro :id da rota
-// Se o seu ID no Prisma for String/UUID, troque por: z.string().uuid('ID inválido')
-export const clienteIdParamSchema = z.object({
-  id: z.coerce
-    .number()
-    .int()
-    .positive("O ID deve ser um número inteiro positivo."),
-});
-
-// Schema de criação (POST)
+// Schema de criação (POST). Os limites acompanham as colunas da tabela
+// cliente (nome e email são VARCHAR(150)).
 export const criarClienteSchema = z.object({
   nome: z
     .string({ error: "O nome é obrigatório." })
     .trim()
     .min(2, "O nome deve ter pelo menos 2 caracteres.")
-    .max(100, "O nome deve ter no máximo 100 caracteres."),
+    .max(150, "O nome deve ter no máximo 150 caracteres."),
   telefone: z
     .string({ error: "O telefone é obrigatório." })
     .trim()
@@ -25,7 +18,7 @@ export const criarClienteSchema = z.object({
     .string()
     .trim()
     .email("Formato de e-mail inválido.")
-    .max(100)
+    .max(150)
     .nullish(),
 
   // Campos de endereço opcionais — nomes alinhados ao model Cliente do
@@ -42,5 +35,12 @@ export const criarClienteSchema = z.object({
 // Schema de atualização parcial (PATCH) — torna todos os campos opcionais
 export const atualizarClienteSchema = criarClienteSchema.partial();
 
+// Com a lista paginada, o atendente precisa de um jeito de achar o cliente
+// sem folhear páginas: ?busca= procura no nome, no telefone e no e-mail.
+export const listarClientesQuerySchema = paginacaoQuerySchema.extend({
+  busca: z.string().trim().min(1).max(100).optional(),
+});
+
 export type CriarClienteDTO = z.infer<typeof criarClienteSchema>;
 export type AtualizarClienteDTO = z.infer<typeof atualizarClienteSchema>;
+export type ListarClientesQuery = z.infer<typeof listarClientesQuerySchema>;

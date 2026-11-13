@@ -6,19 +6,16 @@ import { inicioDoDia, somarDias } from "../lib/datas.js";
 // eficiente em SQL direto do que montando objetos em memória. Todos os
 // valores entram como parâmetros (Prisma.sql), nunca concatenados.
 //
-// Pedidos cancelados ficam de fora. Como CANCELADO é um status final, "não
-// está cancelado" equivale a "não existe linha CANCELADO no histórico".
+// Pedidos cancelados ficam de fora (pedido.status_atual, coluna mantida por
+// trigger a partir do histórico de status).
 
 function filtroDoPeriodo(dataInicio: Date, dataFim: Date) {
   const desde = inicioDoDia(dataInicio).toISOString();
   const ate = inicioDoDia(somarDias(dataFim, 1)).toISOString();
   return Prisma.sql`
-    p.data_hora >= ${desde}::timestamp
-    AND p.data_hora < ${ate}::timestamp
-    AND NOT EXISTS (
-      SELECT 1 FROM status_pedido_historico s
-      WHERE s.pedido_id = p.id AND s.status = 'CANCELADO'
-    )`;
+    p.data_hora >= ${desde}::timestamptz
+    AND p.data_hora < ${ate}::timestamptz
+    AND p.status_atual <> 'CANCELADO'`;
 }
 
 // Regra do contexto: "ninguém sabe ao certo quais produtos venderam mais em

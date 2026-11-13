@@ -1,12 +1,14 @@
 import { Router } from "express";
 import * as cupomController from "../controllers/cupom.controller.js";
+import { soGerente } from "../middlewares/autenticacao.js";
 
 const cupomRoutes = Router();
 
-cupomRoutes.post("/", cupomController.criar);
+// Consulta: qualquer funcionário logado. Alteração: só gerente.
 cupomRoutes.get("/", cupomController.listar);
 cupomRoutes.get("/:id", cupomController.buscarPorId);
-cupomRoutes.patch("/:id", cupomController.atualizar);
-cupomRoutes.delete("/:id", cupomController.remover);
+cupomRoutes.post("/", soGerente, cupomController.criar);
+cupomRoutes.patch("/:id", soGerente, cupomController.atualizar);
+cupomRoutes.delete("/:id", soGerente, cupomController.remover);
 
 export default cupomRoutes;

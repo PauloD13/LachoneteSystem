@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import * as comboService from "../services/combo.service.js";
-import { idParamSchema } from "../validators/comum.js";
+import { idParamSchema, listarComAtivoQuerySchema } from "../validators/comum.js";
 import {
   criarComboSchema,
   atualizarComboSchema,
@@ -11,8 +11,9 @@ export async function criar(req: Request, res: Response): Promise<void> {
   res.status(201).json(await comboService.criar(dados));
 }
 
-export async function listar(_req: Request, res: Response): Promise<void> {
-  res.status(200).json(await comboService.listar());
+export async function listar(req: Request, res: Response): Promise<void> {
+  const filtros = listarComAtivoQuerySchema.parse(req.query);
+  res.status(200).json(await comboService.listar(filtros));
 }
 
 export async function buscarPorId(req: Request, res: Response): Promise<void> {

@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import * as adicionalService from "../services/adicional.service.js";
-import { idParamSchema } from "../validators/comum.js";
+import { idParamSchema, listarComAtivoQuerySchema } from "../validators/comum.js";
 import {
   criarAdicionalSchema,
   atualizarAdicionalSchema,
@@ -11,8 +11,9 @@ export async function criar(req: Request, res: Response): Promise<void> {
   res.status(201).json(await adicionalService.criar(dados));
 }
 
-export async function listar(_req: Request, res: Response): Promise<void> {
-  res.status(200).json(await adicionalService.listar());
+export async function listar(req: Request, res: Response): Promise<void> {
+  const filtros = listarComAtivoQuerySchema.parse(req.query);
+  res.status(200).json(await adicionalService.listar(filtros));
 }
 
 export async function buscarPorId(req: Request, res: Response): Promise<void> {

@@ -1,6 +1,9 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "../lib/prisma.js";
+import { prisma, type Tx } from "../lib/prisma.js";
 import { AppError } from "../lib/appError.js";
+import { paginar, recorte } from "../lib/paginacao.js";
+import { removerOuExplicar } from "../lib/remocao.js";
+import type { ListarComAtivoQuery } from "../validators/comum.js";
 import type {
   CriarComboDTO,
   AtualizarComboDTO,
@@ -26,18 +29,20 @@ function achatar(combo: ComboComRelacoes) {
     id: combo.id,
     nome: combo.itemVendavel.nome,
     preco: combo.itemVendavel.preco,
+    ativo: combo.itemVendavel.ativo,
     descricao: combo.descricao,
     itens: combo.comboItens.map((item) => ({
       produtoId: item.produtoId,
       nome: item.produto.itemVendavel.nome,
       precoIndividual: item.produto.itemVendavel.preco,
+      ativo: item.produto.itemVendavel.ativo,
       quantidade: item.quantidade,
     })),
   };
 }
 
 async function exigirProdutos(
-  tx: Prisma.TransactionClient,
+  tx: Tx,
   produtoIds: number[],
 ) {
   const encontrados = await tx.produto.findMany({
@@ -55,7 +60,7 @@ async function exigirProdutos(
 }
 
 export async function criar(dados: CriarComboDTO) {
-  const { nome, preco, descricao, itens } = dados;
+  const { nome, preco, ativo, descricao, itens } = dados;
 
   const combo = await prisma.$transaction(async (tx) => {
     await exigirProdutos(
@@ -64,7 +69,7 @@ export async function criar(dados: CriarComboDTO) {
     );
 
     const itemVendavel = await tx.itemVendavel.create({
-      data: { nome, preco, tipo: TIPO_COMBO },
+      data: { nome, preco, ativo, tipo: TIPO_COMBO },
     });
 
     await tx.combo.create({
@@ -84,12 +89,20 @@ export async function criar(dados: CriarComboDTO) {
   return achatar(combo);
 }
 
-export async function listar() {
-  const combos = await prisma.combo.findMany({
-    include: comRelacoes,
-    orderBy: { id: "asc" },
-  });
-  return combos.map(achatar);
+export async function listar({ ativo, ...pagina }: ListarComAtivoQuery) {
+  const where: Prisma.ComboWhereInput =
+    ativo === undefined ? {} : { itemVendavel: { ativo } };
+
+  const [combos, total] = await prisma.$transaction([
+    prisma.combo.findMany({
+      where,
+      include: comRelacoes,
+      orderBy: { id: "asc" },
+      ...recorte(pagina),
+    }),
+    prisma.combo.count({ where }),
+  ]);
+  return paginar(combos.map(achatar), total, pagina);
 }
 
 export async function buscarPorId(id: number) {
@@ -101,15 +114,18 @@ export async function buscarPorId(id: number) {
 }
 
 export async function atualizar(id: number, dados: AtualizarComboDTO) {
-  const { nome, preco, descricao, itens } = dados;
+  const { nome, preco, ativo, descricao, itens } = dados;
 
   const combo = await prisma.$transaction(async (tx) => {
     // Confirma primeiro que o id é de um combo (e não de um produto, que
     // compartilha a mesma sequência de ids via item_vendavel).
     await tx.combo.findUniqueOrThrow({ where: { id }, select: { id: true } });
 
-    if (nome !== undefined || preco !== undefined) {
-      await tx.itemVendavel.update({ where: { id }, data: { nome, preco } });
+    if (nome !== undefined || preco !== undefined || ativo !== undefined) {
+      await tx.itemVendavel.update({
+        where: { id },
+        data: { nome, preco, ativo },
+      });
     }
 
     if (descricao !== undefined) {
@@ -137,10 +153,14 @@ export async function atualizar(id: number, dados: AtualizarComboDTO) {
 }
 
 export async function remover(id: number) {
-  await prisma.$transaction(async (tx) => {
-    // Mesma trava do produto: apagar o subtipo primeiro confirma que o id é
-    // de um combo antes de tocar no item_vendavel.
-    await tx.combo.delete({ where: { id } });
-    await tx.itemVendavel.delete({ where: { id } });
-  });
+  await removerOuExplicar(
+    () =>
+      prisma.$transaction(async (tx) => {
+        // Mesma trava do produto: apagar o subtipo primeiro confirma que o id
+        // é de um combo antes de tocar no item_vendavel.
+        await tx.combo.delete({ where: { id } });
+        await tx.itemVendavel.delete({ where: { id } });
+      }),
+    "Combo já vendido não pode ser removido: desative-o (ativo = false) para tirá-lo do cardápio.",
+  );
 }

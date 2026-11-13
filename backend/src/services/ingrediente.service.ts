@@ -1,8 +1,11 @@
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../lib/appError.js";
+import { paginar, recorte } from "../lib/paginacao.js";
+import { removerOuExplicar } from "../lib/remocao.js";
 import type {
   CriarIngredienteDTO,
   AtualizarIngredienteDTO,
+  ListarIngredientesQuery,
 } from "../validators/ingrediente.validator.js";
 
 const comFornecedor = {
@@ -24,11 +27,21 @@ export async function criar(dados: CriarIngredienteDTO) {
   return prisma.ingrediente.create({ data: dados, include: comFornecedor });
 }
 
-export async function listar() {
-  return prisma.ingrediente.findMany({
-    include: comFornecedor,
-    orderBy: { nome: "asc" },
-  });
+export async function listar({
+  fornecedorId,
+  ...pagina
+}: ListarIngredientesQuery) {
+  const where = fornecedorId === undefined ? {} : { fornecedorId };
+  const [dados, total] = await prisma.$transaction([
+    prisma.ingrediente.findMany({
+      where,
+      include: comFornecedor,
+      orderBy: [{ nome: "asc" }, { id: "asc" }],
+      ...recorte(pagina),
+    }),
+    prisma.ingrediente.count({ where }),
+  ]);
+  return paginar(dados, total, pagina);
 }
 
 export async function buscarPorId(id: number) {
@@ -50,5 +63,8 @@ export async function atualizar(id: number, dados: AtualizarIngredienteDTO) {
 }
 
 export async function remover(id: number) {
-  await prisma.ingrediente.delete({ where: { id } });
+  await removerOuExplicar(
+    () => prisma.ingrediente.delete({ where: { id } }),
+    "Ingrediente usado na ficha técnica de algum produto não pode ser removido. Retire-o das fichas técnicas antes.",
+  );
 }

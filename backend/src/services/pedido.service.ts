@@ -1,8 +1,11 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "../lib/prisma.js";
+import { prisma, type Tx } from "../lib/prisma.js";
 import { AppError } from "../lib/appError.js";
+import { CARGO, vinculoVigente, type NomeDeCargo } from "../lib/cargos.js";
 import { hojeComoData, inicioDoDia, somarDias } from "../lib/datas.js";
 import { calcularDesconto, estaVigente } from "../lib/desconto.js";
+import { paginar, recorte } from "../lib/paginacao.js";
+import type { UsuarioAutenticado } from "../middlewares/autenticacao.js";
 import type {
   AvaliarPedidoDTO,
   CriarPedidoDTO,
@@ -11,7 +14,6 @@ import type {
   StatusPedido,
 } from "../validators/pedido.validator.js";
 
-type Tx = Prisma.TransactionClient;
 type Decimal = Prisma.Decimal;
 
 const ZERO = new Prisma.Decimal(0);
@@ -67,25 +69,37 @@ function calcularTotais(pedido: PedidoCompleto) {
     : ZERO;
   const taxaEntrega = pedido.entrega?.taxaEntrega ?? ZERO;
   const total = subtotalItens.minus(descontoCupom).plus(taxaEntrega);
-  const totalPago = pedido.pagamentos.reduce(
-    (soma, p) => soma.plus(p.valorPago),
-    ZERO,
-  );
+
+  // Pagamento estornado (pedido cancelado depois de pago) continua
+  // registrado, mas não conta mais como valor pago.
+  let totalPago = ZERO;
+  let totalEstornado = ZERO;
+  for (const pagamento of pedido.pagamentos) {
+    if (pagamento.estornadoEm === null) {
+      totalPago = totalPago.plus(pagamento.valorPago);
+    } else {
+      totalEstornado = totalEstornado.plus(pagamento.valorPago);
+    }
+  }
+
   return {
     subtotalItens,
     descontoCupom,
     taxaEntrega,
     total,
     totalPago,
-    saldo: total.minus(totalPago),
+    totalEstornado,
+    // Pedido cancelado não tem nada a receber.
+    saldo: pedido.statusAtual === "CANCELADO" ? ZERO : total.minus(totalPago),
   };
 }
 
-// Decisão 5 do MER: não existe coluna de status em pedido — o status atual é
-// o registro mais recente do histórico.
-function statusAtual(pedido: PedidoCompleto): StatusPedido | null {
-  const ultimo = pedido.statusHistorico.at(-1);
-  return ultimo ? (ultimo.status as StatusPedido) : null;
+// Decisão 5 do MER (revisada): o histórico continua sendo a fonte da verdade,
+// e pedido.status_atual é uma cópia do último registro, mantida por trigger
+// no banco. A aplicação só LÊ essa coluna — para mudar o status, insere uma
+// linha no histórico.
+function statusAtual(pedido: { statusAtual: string }): StatusPedido {
+  return pedido.statusAtual as StatusPedido;
 }
 
 function tipoAtendimento(pedido: PedidoCompleto) {
@@ -149,6 +163,7 @@ function formatar(pedido: PedidoCompleto) {
       id: p.id,
       formaPagamento: p.formaPagamento,
       valorPago: moeda(p.valorPago),
+      estornadoEm: p.estornadoEm,
     })),
     avaliacao: pedido.avaliacao && {
       nota: pedido.avaliacao.nota,
@@ -165,6 +180,7 @@ function formatar(pedido: PedidoCompleto) {
       taxaEntrega: moeda(totais.taxaEntrega),
       total: moeda(totais.total),
       totalPago: moeda(totais.totalPago),
+      totalEstornado: moeda(totais.totalEstornado),
       saldo: moeda(totais.saldo),
     },
   };
@@ -225,6 +241,14 @@ async function precificarItens(
           },
         },
       },
+      // Para recusar combo que contenha produto fora do cardápio.
+      combo: {
+        include: {
+          comboItens: {
+            include: { produto: { include: { itemVendavel: true } } },
+          },
+        },
+      },
     },
   });
   const vendavelPorId = new Map(vendaveis.map((v) => [v.id, v]));
@@ -241,6 +265,20 @@ async function precificarItens(
       throw new AppError(
         400,
         `Item ${item.itemVendavelId} não existe no cardápio.`,
+      );
+    }
+    // Item desativado continua no banco (por causa dos pedidos antigos), mas
+    // não entra em pedido novo.
+    if (!vendavel.ativo) {
+      throw new AppError(409, `"${vendavel.nome}" está fora do cardápio.`);
+    }
+    const componenteInativo = vendavel.combo?.comboItens.find(
+      (ci) => !ci.produto.itemVendavel.ativo,
+    );
+    if (componenteInativo) {
+      throw new AppError(
+        409,
+        `O combo "${vendavel.nome}" está indisponível: "${componenteInativo.produto.itemVendavel.nome}" está fora do cardápio.`,
       );
     }
 
@@ -278,6 +316,12 @@ async function precificarItens(
         const adicional = adicionalPorId.get(adicionalId);
         if (!adicional) {
           throw new AppError(400, `Adicional ${adicionalId} não existe.`);
+        }
+        if (!adicional.ativo) {
+          throw new AppError(
+            409,
+            `O adicional "${adicional.nome}" está fora do cardápio.`,
+          );
         }
         return { adicionalId, precoPraticado: adicional.preco };
       }),
@@ -354,13 +398,38 @@ function resolverEndereco(
   };
 }
 
-async function exigirFuncionario(tx: Tx, id: number, papel: string) {
+// Regras 4.3/4.4/4.5: o pedido registra "o atendente" e a entrega "o
+// entregador" — não um funcionário qualquer. Exige que a pessoa exista,
+// esteja ativa e exerça HOJE o cargo correspondente.
+async function exigirFuncionarioComCargo(
+  tx: Tx,
+  id: number,
+  cargo: NomeDeCargo,
+  hoje: Date,
+) {
   const funcionario = await tx.funcionario.findUnique({
     where: { id },
-    select: { id: true },
+    select: {
+      nome: true,
+      ativo: true,
+      funcionarioCargos: {
+        where: { ...vinculoVigente(hoje), cargo: { nome: cargo } },
+        select: { id: true },
+        take: 1,
+      },
+    },
   });
   if (!funcionario) {
-    throw new AppError(400, `${papel} ${id} não existe.`);
+    throw new AppError(400, `Funcionário ${id} não existe.`);
+  }
+  if (!funcionario.ativo) {
+    throw new AppError(409, `${funcionario.nome} está desativado(a).`);
+  }
+  if (funcionario.funcionarioCargos.length === 0) {
+    throw new AppError(
+      409,
+      `${funcionario.nome} não exerce o cargo de ${cargo} hoje.`,
+    );
   }
 }
 
@@ -380,11 +449,16 @@ async function exigirFormasDePagamento(tx: Tx, ids: number[]) {
   }
 }
 
-export async function criar(dados: CriarPedidoDTO) {
+// `usuario` é quem está logado. Se o corpo não disser quem atendeu, o
+// atendente é o próprio usuário — o caso normal no balcão. Informar outro
+// atendenteId serve, por exemplo, para o gerente lançar um pedido anotado por
+// um colega.
+export async function criar(dados: CriarPedidoDTO, usuario: UsuarioAutenticado) {
   const pedido = await prisma.$transaction(async (tx) => {
     const hoje = hojeComoData();
 
-    await exigirFuncionario(tx, dados.atendenteId, "Atendente");
+    const atendenteId = dados.atendenteId ?? usuario.id;
+    await exigirFuncionarioComCargo(tx, atendenteId, CARGO.ATENDENTE, hoje);
 
     const cliente =
       dados.clienteId != null
@@ -425,9 +499,14 @@ export async function criar(dados: CriarPedidoDTO) {
 
     let entrega = null;
     if (dados.entrega && cliente) {
-      await exigirFuncionario(tx, dados.entrega.entregadorId, "Entregador");
+      // O entregador pode ser definido depois (PATCH /pedidos/:id/entrega):
+      // na hora do pedido nem sempre se sabe quem estará livre.
+      const entregadorId = dados.entrega.entregadorId ?? null;
+      if (entregadorId !== null) {
+        await exigirFuncionarioComCargo(tx, entregadorId, CARGO.ENTREGADOR, hoje);
+      }
       entrega = {
-        entregadorId: dados.entrega.entregadorId,
+        entregadorId,
         taxaEntrega: dados.entrega.taxaEntrega,
         ...resolverEndereco(dados.entrega, cliente),
       };
@@ -453,17 +532,19 @@ export async function criar(dados: CriarPedidoDTO) {
       }
     }
 
-    // Um único create aninhado: pedido, itens, adicionais, status inicial,
-    // entrega e pagamentos nascem juntos ou nada é gravado.
-    return tx.pedido.create({
+    // Um único create aninhado: pedido, itens, adicionais, entrega e
+    // pagamentos nascem juntos ou nada é gravado. O status inicial
+    // (RECEBIDO) não aparece aqui: quem o grava no histórico é o trigger
+    // trg_pedido_status_inicial, no banco — assim nenhum pedido existe sem
+    // histórico, seja qual for o caminho por onde foi inserido.
+    const criado = await tx.pedido.create({
       data: {
         canal: dados.canal,
         clienteId: cliente?.id ?? null,
         mesaId: dados.mesaId ?? null,
-        atendenteId: dados.atendenteId,
+        atendenteId,
         cupomId: cupom?.id ?? null,
         observacoes: dados.observacoes ?? null,
-        statusHistorico: { create: { status: "RECEBIDO" } },
         itens: {
           create: itens.map(({ adicionais, ...item }) => ({
             ...item,
@@ -473,8 +554,11 @@ export async function criar(dados: CriarPedidoDTO) {
         ...(entrega ? { entrega: { create: entrega } } : {}),
         pagamentos: { create: dados.pagamentos },
       },
-      include: inclusaoCompleta,
+      select: { id: true },
     });
+
+    // Relê depois do insert, já com o que os triggers gravaram.
+    return carregar(tx, criado.id);
   });
 
   return formatar(pedido);
@@ -488,66 +572,35 @@ export async function buscarPorId(id: number) {
   return formatar(await carregar(prisma, id));
 }
 
-// A paginação e os filtros rodam em SQL direto porque "status atual" não é
-// uma coluna: é o último registro do histórico de cada pedido, algo que o
-// `where` do Prisma não consegue expressar. Os valores entram sempre como
-// parâmetros (Prisma.sql), nunca concatenados na string.
+// Com pedido.status_atual (coluna mantida por trigger), o filtro por status é
+// um `where` comum, atendido pelo índice (status_atual, data_hora) — antes
+// era preciso uma subconsulta no histórico para cada pedido.
 export async function listar(filtros: ListarPedidosQuery) {
-  const { pagina, tamanhoPagina, status, clienteId, dataInicio, dataFim } =
-    filtros;
+  const { status, clienteId, dataInicio, dataFim, ...pagina } = filtros;
 
-  const condicoes: Prisma.Sql[] = [];
-  if (clienteId !== undefined) {
-    condicoes.push(Prisma.sql`p.cliente_id = ${clienteId}`);
-  }
-  if (dataInicio) {
-    const desde = inicioDoDia(dataInicio).toISOString();
-    condicoes.push(Prisma.sql`p.data_hora >= ${desde}::timestamp`);
-  }
-  if (dataFim) {
-    const ate = inicioDoDia(somarDias(dataFim, 1)).toISOString();
-    condicoes.push(Prisma.sql`p.data_hora < ${ate}::timestamp`);
-  }
-  if (status) {
-    condicoes.push(Prisma.sql`(
-      SELECT s.status FROM status_pedido_historico s
-      WHERE s.pedido_id = p.id
-      ORDER BY s.data_hora DESC, s.id DESC
-      LIMIT 1
-    ) = ${status}`);
-  }
-  const where =
-    condicoes.length > 0
-      ? Prisma.sql`WHERE ${Prisma.join(condicoes, " AND ")}`
-      : Prisma.empty;
+  // O período é informado em DIAS no fuso do negócio; data_hora é um
+  // instante (TIMESTAMPTZ). inicioDoDia faz a conversão.
+  const periodo: Prisma.DateTimeFilter = {};
+  if (dataInicio) periodo.gte = inicioDoDia(dataInicio);
+  if (dataFim) periodo.lt = inicioDoDia(somarDias(dataFim, 1));
 
-  const [linhas, contagem] = await Promise.all([
-    prisma.$queryRaw<{ id: number }[]>`
-      SELECT p.id FROM pedido p ${where}
-      ORDER BY p.data_hora DESC, p.id DESC
-      LIMIT ${tamanhoPagina} OFFSET ${(pagina - 1) * tamanhoPagina}`,
-    prisma.$queryRaw<{ total: number }[]>`
-      SELECT COUNT(*)::int AS total FROM pedido p ${where}`,
+  const where: Prisma.PedidoWhereInput = {
+    ...(status === undefined ? {} : { statusAtual: status }),
+    ...(clienteId === undefined ? {} : { clienteId }),
+    ...(dataInicio || dataFim ? { dataHora: periodo } : {}),
+  };
+
+  const [pedidos, total] = await prisma.$transaction([
+    prisma.pedido.findMany({
+      where,
+      include: inclusaoCompleta,
+      orderBy: [{ dataHora: "desc" }, { id: "desc" }],
+      ...recorte(pagina),
+    }),
+    prisma.pedido.count({ where }),
   ]);
 
-  const ids = linhas.map((l) => l.id);
-  const pedidos = await prisma.pedido.findMany({
-    where: { id: { in: ids } },
-    include: inclusaoCompleta,
-  });
-  const pedidoPorId = new Map(pedidos.map((p) => [p.id, p]));
-
-  return {
-    dados: ids.flatMap((id) => {
-      const pedido = pedidoPorId.get(id);
-      return pedido ? [formatar(pedido)] : [];
-    }),
-    paginacao: {
-      pagina,
-      tamanhoPagina,
-      total: contagem[0]?.total ?? 0,
-    },
-  };
+  return paginar(pedidos.map(formatar), total, pagina);
 }
 
 // Regra 4.1: histórico de pedidos de um cliente cadastrado.
@@ -576,15 +629,14 @@ const TRANSICOES: Record<StatusPedido, StatusPedido[]> = {
 };
 
 function validarTransicao(
-  atual: StatusPedido | null,
+  atual: StatusPedido,
   novo: StatusPedido,
   temEntrega: boolean,
 ) {
-  const permitidos = atual ? TRANSICOES[atual] : ["RECEBIDO"];
-  if (!permitidos.includes(novo)) {
+  if (!TRANSICOES[atual].includes(novo)) {
     throw new AppError(
       409,
-      `Transição de status inválida: ${atual ?? "(sem status)"} -> ${novo}.`,
+      `Transição de status inválida: ${atual} -> ${novo}.`,
     );
   }
   if (novo === "SAIU_PARA_ENTREGA" && !temEntrega) {
@@ -609,6 +661,15 @@ export async function atualizarStatus(id: number, novo: StatusPedido) {
     const atual = await carregar(tx, id);
     validarTransicao(statusAtual(atual), novo, atual.entrega !== null);
 
+    if (novo === "SAIU_PARA_ENTREGA" && atual.entrega?.entregadorId == null) {
+      throw new AppError(
+        409,
+        "Defina o entregador (PATCH /pedidos/:id/entrega) antes de o pedido sair para entrega.",
+      );
+    }
+
+    // Só o histórico é gravado: o trigger do banco copia o novo status para
+    // pedido.status_atual.
     await tx.statusPedidoHistorico.create({
       data: { pedidoId: id, status: novo },
     });
@@ -630,6 +691,15 @@ export async function atualizarStatus(id: number, novo: StatusPedido) {
     // ficaria "queimado" por um pedido que nunca foi concluído.
     if (novo === "CANCELADO" && atual.cupomId !== null) {
       await tx.pedido.update({ where: { id }, data: { cupomId: null } });
+    }
+    // Cancelar um pedido já pago (no todo ou em parte) gera a devolução do
+    // dinheiro. Os pagamentos não são apagados: ficam marcados como
+    // estornados, com a data — entrada e saída do caixa ficam registradas.
+    if (novo === "CANCELADO") {
+      await tx.pedidoPagamento.updateMany({
+        where: { pedidoId: id, estornadoEm: null },
+        data: { estornadoEm: new Date() },
+      });
     }
 
     return carregar(tx, id);
@@ -669,9 +739,9 @@ export async function adicionarPagamento(id: number, dados: PagamentoDTO) {
   return formatar(pedido);
 }
 
-// O schema exige entregador desde a criação da entrega; este endpoint permite
-// trocá-lo enquanto o pedido ainda não saiu.
-export async function trocarEntregador(id: number, entregadorId: number) {
+// Define, troca ou retira (null) o entregador enquanto o pedido ainda não
+// saiu. É aqui que se preenche o entregador de uma entrega criada sem ele.
+export async function definirEntregador(id: number, entregadorId: number | null) {
   const pedido = await prisma.$transaction(async (tx) => {
     await travarPedido(tx, id);
     const atual = await carregar(tx, id);
@@ -687,10 +757,17 @@ export async function trocarEntregador(id: number, entregadorId: number) {
     ) {
       throw new AppError(
         409,
-        `Não é possível trocar o entregador de um pedido ${status}.`,
+        `Não é possível alterar o entregador de um pedido ${status}.`,
       );
     }
-    await exigirFuncionario(tx, entregadorId, "Entregador");
+    if (entregadorId !== null) {
+      await exigirFuncionarioComCargo(
+        tx,
+        entregadorId,
+        CARGO.ENTREGADOR,
+        hojeComoData(),
+      );
+    }
 
     await tx.entrega.update({
       where: { pedidoId: id },

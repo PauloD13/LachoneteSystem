@@ -52,7 +52,8 @@ const enderecoSchema = z.object({
 });
 
 const entregaSchema = z.object({
-  entregadorId: idNoCorpo,
+  // Opcional na criação; obrigatório para o pedido sair para entrega.
+  entregadorId: idNoCorpo.nullish(),
   taxaEntrega: dinheiro,
   // Se omitido, usa o endereço padrão do cadastro do cliente.
   endereco: enderecoSchema.optional(),
@@ -70,7 +71,8 @@ export const criarPedidoSchema = z
     }),
     clienteId: idNoCorpo.nullish(),
     mesaId: idNoCorpo.nullish(),
-    atendenteId: idNoCorpo,
+    // Se omitido, o atendente é o funcionário logado.
+    atendenteId: idNoCorpo.optional(),
     cupomCodigo: codigoCupom.nullish(),
     observacoes: z.string().trim().max(2000).nullish(),
     itens: z
@@ -119,7 +121,10 @@ export const criarPedidoSchema = z
 
 export const atualizarStatusSchema = z.object({ status: statusPedido });
 
-export const trocarEntregadorSchema = z.object({ entregadorId: idNoCorpo });
+// null retira o entregador (enquanto o pedido ainda não saiu).
+export const definirEntregadorSchema = z.object({
+  entregadorId: idNoCorpo.nullable(),
+});
 
 export const avaliarPedidoSchema = z.object({
   nota: z

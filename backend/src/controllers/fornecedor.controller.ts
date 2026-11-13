@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import * as fornecedorService from "../services/fornecedor.service.js";
-import { idParamSchema } from "../validators/comum.js";
+import { idParamSchema, paginacaoQuerySchema } from "../validators/comum.js";
 import {
   criarFornecedorSchema,
   atualizarFornecedorSchema,
@@ -11,8 +11,9 @@ export async function criar(req: Request, res: Response): Promise<void> {
   res.status(201).json(await fornecedorService.criar(dados));
 }
 
-export async function listar(_req: Request, res: Response): Promise<void> {
-  res.status(200).json(await fornecedorService.listar());
+export async function listar(req: Request, res: Response): Promise<void> {
+  const filtros = paginacaoQuerySchema.parse(req.query);
+  res.status(200).json(await fornecedorService.listar(filtros));
 }
 
 export async function buscarPorId(req: Request, res: Response): Promise<void> {

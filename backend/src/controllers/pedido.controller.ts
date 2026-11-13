@@ -1,18 +1,19 @@
 import type { Request, Response } from "express";
 import * as pedidoService from "../services/pedido.service.js";
+import { usuarioDe } from "../middlewares/autenticacao.js";
 import { idParamSchema } from "../validators/comum.js";
 import {
   criarPedidoSchema,
   listarPedidosQuerySchema,
   atualizarStatusSchema,
   pagamentoSchema,
-  trocarEntregadorSchema,
+  definirEntregadorSchema,
   avaliarPedidoSchema,
 } from "../validators/pedido.validator.js";
 
 export async function criar(req: Request, res: Response): Promise<void> {
   const dados = criarPedidoSchema.parse(req.body);
-  res.status(201).json(await pedidoService.criar(dados));
+  res.status(201).json(await pedidoService.criar(dados, usuarioDe(req)));
 }
 
 export async function listar(req: Request, res: Response): Promise<void> {
@@ -53,15 +54,15 @@ export async function adicionarPagamento(
   res.status(201).json(await pedidoService.adicionarPagamento(id, dados));
 }
 
-export async function trocarEntregador(
+export async function definirEntregador(
   req: Request,
   res: Response,
 ): Promise<void> {
   const { id } = idParamSchema.parse(req.params);
-  const { entregadorId } = trocarEntregadorSchema.parse(req.body);
+  const { entregadorId } = definirEntregadorSchema.parse(req.body);
   res
     .status(200)
-    .json(await pedidoService.trocarEntregador(id, entregadorId));
+    .json(await pedidoService.definirEntregador(id, entregadorId));
 }
 
 export async function avaliar(req: Request, res: Response): Promise<void> {

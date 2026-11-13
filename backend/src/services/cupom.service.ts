@@ -2,6 +2,9 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../lib/appError.js";
 import { validarDescontoEVigencia } from "../lib/desconto.js";
+import { paginar, recorte } from "../lib/paginacao.js";
+import { removerOuExplicar } from "../lib/remocao.js";
+import type { PaginacaoQuery } from "../validators/comum.js";
 import type {
   CriarCupomDTO,
   AtualizarCupomDTO,
@@ -12,10 +15,15 @@ export async function criar(dados: CriarCupomDTO) {
   return prisma.cupom.create({ data: dados });
 }
 
-export async function listar() {
-  return prisma.cupom.findMany({
-    orderBy: [{ dataFim: "desc" }, { id: "desc" }],
-  });
+export async function listar(pagina: PaginacaoQuery) {
+  const [dados, total] = await prisma.$transaction([
+    prisma.cupom.findMany({
+      orderBy: [{ dataFim: "desc" }, { id: "desc" }],
+      ...recorte(pagina),
+    }),
+    prisma.cupom.count(),
+  ]);
+  return paginar(dados, total, pagina);
 }
 
 export async function buscarPorId(id: number) {
@@ -57,5 +65,8 @@ export async function atualizar(id: number, dados: AtualizarCupomDTO) {
 }
 
 export async function remover(id: number) {
-  await prisma.cupom.delete({ where: { id } });
+  await removerOuExplicar(
+    () => prisma.cupom.delete({ where: { id } }),
+    "Cupom já utilizado em pedidos não pode ser removido. Para tirá-lo de circulação, ajuste a dataFim.",
+  );
 }

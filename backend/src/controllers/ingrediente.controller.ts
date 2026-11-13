@@ -4,6 +4,7 @@ import { idParamSchema } from "../validators/comum.js";
 import {
   criarIngredienteSchema,
   atualizarIngredienteSchema,
+  listarIngredientesQuerySchema,
 } from "../validators/ingrediente.validator.js";
 
 export async function criar(req: Request, res: Response): Promise<void> {
@@ -11,8 +12,9 @@ export async function criar(req: Request, res: Response): Promise<void> {
   res.status(201).json(await ingredienteService.criar(dados));
 }
 
-export async function listar(_req: Request, res: Response): Promise<void> {
-  res.status(200).json(await ingredienteService.listar());
+export async function listar(req: Request, res: Response): Promise<void> {
+  const filtros = listarIngredientesQuerySchema.parse(req.query);
+  res.status(200).json(await ingredienteService.listar(filtros));
 }
 
 export async function buscarPorId(req: Request, res: Response): Promise<void> {

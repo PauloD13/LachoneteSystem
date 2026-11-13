@@ -45,7 +45,23 @@ export const tipoDesconto = z.enum(["VALOR", "PERCENTUAL"], {
   error: "tipoDesconto deve ser VALOR ou PERCENTUAL.",
 });
 
+// Query string padrão das listagens: ?pagina=1&tamanhoPagina=20
+// (o teto de 100 impede que alguém peça a tabela inteira de uma vez).
 export const paginacaoQuerySchema = z.object({
   pagina: z.coerce.number().int().min(1).max(INT4_MAX).default(1),
   tamanhoPagina: z.coerce.number().int().min(1).max(100).default(20),
 });
+
+export type PaginacaoQuery = z.infer<typeof paginacaoQuerySchema>;
+
+/** Booleano vindo da query string (?ativo=true). */
+export const booleanoNaUrl = z
+  .enum(["true", "false"], { error: "Use true ou false." })
+  .transform((valor) => valor === "true");
+
+/** Listagens de cadastros que podem ser desativados: ?ativo=true|false. */
+export const listarComAtivoQuerySchema = paginacaoQuerySchema.extend({
+  ativo: booleanoNaUrl.optional(),
+});
+
+export type ListarComAtivoQuery = z.infer<typeof listarComAtivoQuerySchema>;

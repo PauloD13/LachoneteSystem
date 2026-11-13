@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { dia, dinheiro, idNoCorpo, tipoDesconto } from "./comum.js";
+import {
+  dia,
+  dinheiro,
+  idNoCorpo,
+  paginacaoQuerySchema,
+  tipoDesconto,
+} from "./comum.js";
 
 // As regras que cruzam campos (dataFim >= dataInicio, percentual <= 100)
 // são validadas no service — ver lib/desconto.ts.
@@ -26,10 +32,11 @@ export const criarPromocaoSchema = z.object({
 // No PATCH, "produtoIds" (se enviado) substitui a lista inteira.
 export const atualizarPromocaoSchema = criarPromocaoSchema.partial();
 
-export const listarPromocoesQuerySchema = z.object({
+export const listarPromocoesQuerySchema = paginacaoQuerySchema.extend({
   // Filtra as promoções que estavam em vigor no dia informado.
   ativaEm: dia.optional(),
 });
 
 export type CriarPromocaoDTO = z.infer<typeof criarPromocaoSchema>;
 export type AtualizarPromocaoDTO = z.infer<typeof atualizarPromocaoSchema>;
+export type ListarPromocoesQuery = z.infer<typeof listarPromocoesQuerySchema>;
