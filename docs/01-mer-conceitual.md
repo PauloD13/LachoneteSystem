@@ -60,7 +60,7 @@ associativas resolvem relacionamentos N:N que carregam atributos próprios.
 | Pedido — Cupom | N:1 | Parcial | Cupom é opcional |
 | Pedido — StatusPedidoHistorico | 1:N | Total | Todo pedido tem ao menos o status inicial "recebido" |
 | Pedido — Entrega | 1:1 | Parcial (só delivery) | — |
-| Entrega — Funcionario(entregador) | N:1 | Total do lado Entrega | Toda entrega tem 1 entregador responsável |
+| Entrega — Funcionario(entregador) | N:1 | Parcial do lado Entrega | Toda entrega **concluída** tem 1 entregador responsável, mas ele é atribuído depois do registro do pedido (na hora de anotar o pedido ainda não se sabe quem estará livre). Passa a ser obrigatório para o pedido sair para entrega |
 | Funcionario — Cargo | N:N (via FuncionarioCargo) | Total do lado Funcionario | Todo funcionário tem ao menos um cargo registrado |
 | Produto — Promocao | N:N (via ProdutoPromocao) | Parcial | Nem todo produto está em promoção |
 | ItemPedido — Adicional | N:N (via ItemPedidoAdicional) | Parcial | Adicional é opcional |
@@ -101,10 +101,25 @@ final dessas justificativas.
    no momento da venda, não uma referência ao preço atual — assim pedidos
    antigos não mudam de valor retroativamente.
 
-5. **StatusPedido — CONFIRMADO: apenas histórico, sem duplicar em Pedido.**
-   Não existe atributo `status` em `Pedido`. O status atual é sempre
-   derivado via query do último registro em `StatusPedidoHistorico`,
-   evitando duas fontes de verdade divergentes.
+5. **StatusPedido — REVISADO: o histórico é a fonte da verdade; o status
+   atual é um atributo derivado.**
+   `StatusPedidoHistorico` continua sendo o único lugar onde uma mudança de
+   status é **registrada** (com data e hora), e é **somente-inserção**: não
+   se corrige nem se apaga o passado. O "status atual" é um **atributo
+   derivado** de `Pedido` (no MER, elipse tracejada): o valor do registro
+   mais recente do histórico.
+
+   *O que mudou e por quê.* Na primeira versão esse atributo derivado não
+   era armazenado — era calculado por consulta. A revisão do sistema mostrou
+   o custo: a pergunta mais frequente da operação ("quais pedidos estão EM
+   PREPARO agora?") exigia olhar o histórico de **todos** os pedidos. No
+   modelo lógico o atributo passou a ser materializado em
+   `pedido.status_atual`. O risco que a decisão original evitava — duas
+   fontes de verdade divergindo — é eliminado de outra forma: quem escreve
+   essa coluna é **exclusivamente o banco** (trigger disparado a cada
+   inserção no histórico), e outro trigger recusa qualquer tentativa de
+   alterá-la diretamente. Ver justificativa 3 em
+   `05-justificativas-tecnicas.md`.
 
 6. **Endereço de entrega: em Cliente ou em Entrega? — CONFIRMADO: nos dois,
    com propósitos diferentes.**
@@ -116,6 +131,31 @@ final dessas justificativas.
    preço: se o cliente se mudar depois, o histórico de entregas antigas não
    pode ser alterado retroativamente. Também cobre o caso de um cliente
    pedir entrega em um endereço diferente do cadastrado.
+
+7. **Desativar em vez de apagar — ADICIONADO na revisão.**
+   `ItemVendavel` (portanto Produto e Combo), `Adicional` e `Funcionario`
+   ganharam o atributo `ativo`. Tudo o que já participou de um pedido não
+   pode ser removido (o pedido aponta para ele), mas precisa poder sair de
+   cena: produto que saiu do cardápio, funcionário desligado. Sem esse
+   atributo o sistema só oferecia duas saídas ruins — manter para sempre no
+   cardápio ou perder o histórico. Pelo mesmo motivo, apagar um funcionário
+   deixou de apagar em cascata o histórico de cargos dele
+   (`FuncionarioCargo` existe justamente para guardar esse histórico).
+   `Mesa` já tinha `ativa` desde a primeira versão.
+
+8. **Acesso ao sistema é atributo de Funcionario — ADICIONADO na revisão.**
+   Quem usa o sistema são os funcionários; não existe "usuário" que não
+   seja um deles. Por isso `login` e `senha_hash` são atributos (opcionais)
+   de `Funcionario`, e não uma entidade `Usuario` separada — que teria um
+   relacionamento 1:1 obrigatório com Funcionario e nenhum atributo
+   próprio. As **permissões** não são armazenadas: derivam dos cargos que o
+   funcionário exerce na data (`FuncionarioCargo`), que o modelo já tinha.
+
+9. **Estorno de pagamento — ADICIONADO na revisão.**
+   `PedidoPagamento` ganhou o atributo opcional `estornado_em`. Quando um
+   pedido já pago é cancelado, os pagamentos não são apagados (o dinheiro
+   entrou e saiu do caixa — os dois fatos são história) e sim marcados como
+   estornados.
 
 ## 5. Próximos passos
 

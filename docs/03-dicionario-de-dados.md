@@ -8,6 +8,11 @@
 Legenda da coluna **Chave**: PK = primária · FK = estrangeira · CD = candidata
 (unique, não PK) · — = não é chave.
 
+**Sobre datas e horas:** `DATE` é um dia de calendário (validade de
+promoção, início de um cargo). `TIMESTAMPTZ` é um instante exato: o
+PostgreSQL o armazena em UTC e o converte na leitura, de modo que o valor
+gravado não depende do fuso horário do servidor.
+
 ## cliente
 
 | Atributo | Tipo | Tam./Prec. | Chave | Obrigatório | Descrição |
@@ -21,7 +26,7 @@ Legenda da coluna **Chave**: PK = primária · FK = estrangeira · CD = candidat
 | endereco_padrao_bairro | VARCHAR | 100 | — | Não | Bairro do endereço padrão |
 | endereco_padrao_cidade | VARCHAR | 100 | — | Não | Cidade do endereço padrão |
 | endereco_padrao_cep | VARCHAR | 9 | — | Não | CEP do endereço padrão |
-| criado_em | TIMESTAMP | — | — | Sim | Data/hora do cadastro do cliente |
+| criado_em | TIMESTAMPTZ | — | — | Sim | Data/hora do cadastro do cliente |
 
 Regra de negócio aplicada na camada de aplicação (não em constraint de
 schema): cadastro completo (nome, contato, endereço) só é exigido quando o
@@ -54,6 +59,11 @@ referencie produto ou combo de forma unificada.
 | nome | VARCHAR | 150 | — | Sim | Nome comercial exibido no cardápio |
 | preco | DECIMAL | 10,2 | — | Sim | Preço-base (produto) ou preço promocional do conjunto (combo) |
 | tipo | VARCHAR | 10 | — | Sim | Discriminador: `PRODUTO` ou `COMBO` |
+| ativo | BOOLEAN | — | — | Sim | `false` = fora do cardápio: não entra em pedidos novos, mas continua existindo para os pedidos antigos que o referenciam (padrão `true`) |
+
+Restrição (triggers): todo `item_vendavel` existe em **exatamente uma** das
+tabelas `produto` / `combo`, e `tipo` indica qual. A verificação acontece no
+`COMMIT`, porque o cadastro é feito em dois passos na mesma transação.
 
 ## produto
 
@@ -100,6 +110,7 @@ mesmo combo.
 | id | INTEGER | — | PK | Sim | Identificador único do adicional |
 | nome | VARCHAR | 50 | — | Sim | Nome do adicional (ex.: "bacon extra") |
 | preco | DECIMAL | 10,2 | — | Sim | Preço do adicional |
+| ativo | BOOLEAN | — | — | Sim | `false` = não é mais oferecido; preserva o histórico dos pedidos em que foi usado (padrão `true`) |
 
 ## fornecedor
 
@@ -150,6 +161,13 @@ para a consulta obrigatória de "consumo estimado de ingredientes" (seção
 | nome | VARCHAR | 150 | — | Sim | Nome do funcionário |
 | telefone | VARCHAR | 20 | — | Não | Contato telefônico |
 | email | VARCHAR | 150 | — | Não | Contato por e-mail |
+| ativo | BOOLEAN | — | — | Sim | `false` = funcionário desligado: não acessa o sistema nem pode ser atendente/entregador de pedidos novos; o histórico é preservado (padrão `true`) |
+| login | VARCHAR | 50 | CD | Não | Nome de usuário para entrar no sistema. Opcional: nem todo funcionário usa o sistema |
+| senha_hash | VARCHAR | 255 | — | Não | Resultado da função de hash (scrypt) aplicada à senha. A senha em si nunca é armazenada |
+
+Restrição: `login` e `senha_hash` são preenchidos juntos ou ficam ambos
+nulos (`CHECK`). As **permissões** não são armazenadas: derivam dos cargos
+que o funcionário exerce na data, em `funcionario_cargo`.
 
 ## funcionario_cargo
 
@@ -168,6 +186,10 @@ IS NULL` — impede abrir o mesmo cargo duas vezes para o mesmo funcionário
 sem encerrar o período anterior, sem impedir que o funcionário acumule
 cargos diferentes simultaneamente (regra de negócio 4.5).
 
+A FK `funcionario_id` é `ON DELETE RESTRICT`: um funcionário com histórico de
+cargos não pode ser apagado (deve ser desativado) — do contrário o histórico
+que esta tabela existe para guardar desapareceria junto.
+
 ## promocao
 
 | Atributo | Tipo | Tam./Prec. | Chave | Obrigatório | Descrição |
@@ -177,7 +199,7 @@ cargos diferentes simultaneamente (regra de negócio 4.5).
 | data_inicio | DATE | — | — | Sim | Data de início da vigência |
 | data_fim | DATE | — | — | Sim | Data de término da vigência |
 | tipo_desconto | VARCHAR | 10 | — | Sim | `VALOR` (desconto fixo em R$) ou `PERCENTUAL` |
-| valor_desconto | DECIMAL | 10,2 | — | Sim | Valor ou percentual de desconto, conforme tipo_desconto |
+| valor_desconto | DECIMAL | 10,2 | — | Sim | Valor ou percentual de desconto, conforme tipo_desconto. Maior que zero; se `PERCENTUAL`, no máximo 100 (`CHECK`) |
 
 ## produto_promocao
 
@@ -197,7 +219,7 @@ promoções.
 | id | INTEGER | — | PK | Sim | Identificador único do cupom |
 | codigo | VARCHAR | 30 | CD | Sim | Código informado pelo cliente para aplicar o desconto |
 | tipo_desconto | VARCHAR | 10 | — | Sim | `VALOR` ou `PERCENTUAL` |
-| valor_desconto | DECIMAL | 10,2 | — | Sim | Valor ou percentual de desconto, conforme tipo_desconto |
+| valor_desconto | DECIMAL | 10,2 | — | Sim | Valor ou percentual de desconto, conforme tipo_desconto. Maior que zero; se `PERCENTUAL`, no máximo 100 (`CHECK`) |
 | data_inicio | DATE | — | — | Sim | Início da validade do cupom |
 | data_fim | DATE | — | — | Sim | Fim da validade do cupom |
 
@@ -213,16 +235,24 @@ promoções.
 | Atributo | Tipo | Tam./Prec. | Chave | Obrigatório | Descrição |
 | --- | --- | --- | --- | --- | --- |
 | id | INTEGER | — | PK | Sim | Identificador único do pedido |
-| data_hora | TIMESTAMP | — | — | Sim | Data/hora de criação do pedido |
+| data_hora | TIMESTAMPTZ | — | — | Sim | Data/hora de criação do pedido |
 | canal | VARCHAR | 10 | — | Sim | Canal de origem: `BALCAO`, `TELEFONE` ou `APP` |
 | cliente_id | INTEGER | — | FK → cliente.id | Não | Cliente do pedido; obrigatório apenas para pedidos via app/delivery (regra de negócio) |
 | mesa_id | INTEGER | — | FK → mesa.id | Não | Mesa associada; preenchido apenas em consumo local |
 | atendente_id | INTEGER | — | FK → funcionario.id | Sim | Funcionário (atendente) que registrou o pedido — usado para cálculo de comissão |
 | cupom_id | INTEGER | — | FK → cupom.id | Não | Cupom de desconto aplicado, se houver |
 | observacoes | TEXT | — | — | Não | Observações gerais do pedido |
+| status_atual | VARCHAR | 20 | — | Sim | **Atributo derivado**: situação atual do pedido — cópia do status mais recente em `status_pedido_historico` (padrão `RECEBIDO`) |
 
-**Atributo derivado (não persistido):** status atual = registro mais
-recente do pedido em `status_pedido_historico`, ordenado por `data_hora`.
+**Sobre `status_atual`:** a fonte da verdade do status é
+`status_pedido_historico`. Esta coluna é mantida exclusivamente por trigger
+do banco (a cada linha inserida no histórico) e outro trigger recusa
+alterações diretas — a aplicação apenas a lê. Existe para que consultas como
+"pedidos em preparo" sejam atendidas por índice.
+
+**Atributos derivados não persistidos:** subtotal dos itens, desconto do
+cupom, total, total pago e saldo — calculados a partir de `item_pedido`,
+`item_pedido_adicional`, `cupom`, `entrega` e `pedido_pagamento`.
 
 ## item_pedido
 
@@ -258,7 +288,12 @@ Entidade fraca — log completo de mudanças de status do pedido.
 | id | INTEGER | — | PK | Sim | Identificador único do registro |
 | pedido_id | INTEGER | — | FK → pedido.id | Sim | Pedido ao qual o status se refere |
 | status | VARCHAR | 20 | — | Sim | `RECEBIDO`, `EM_PREPARO`, `PRONTO`, `SAIU_PARA_ENTREGA`, `ENTREGUE_RETIRADO` ou `CANCELADO` |
-| data_hora | TIMESTAMP | — | — | Sim | Momento exato em que o pedido passou a ter esse status |
+| data_hora | TIMESTAMPTZ | — | — | Sim | Momento exato em que o pedido passou a ter esse status |
+
+Restrições (triggers): a tabela é **somente-inserção** — registros não podem
+ser alterados nem apagados (exceto quando o próprio pedido é apagado). A
+primeira linha de cada pedido (`RECEBIDO`) é criada automaticamente junto
+com o pedido.
 
 ## pedido_pagamento
 
@@ -270,6 +305,7 @@ Entidade associativa N:N entre pedido e forma_pagamento.
 | pedido_id | INTEGER | — | FK → pedido.id | Sim | Pedido pago |
 | forma_pagamento_id | INTEGER | — | FK → forma_pagamento.id | Sim | Forma de pagamento usada |
 | valor_pago | DECIMAL | 10,2 | — | Sim | Valor pago nessa forma específica |
+| estornado_em | TIMESTAMPTZ | — | — | Não | Momento em que o pagamento foi estornado (pedido cancelado depois de pago). `NULL` = pagamento válido. Pagamento estornado continua registrado, mas não conta como valor pago |
 
 ## entrega
 
@@ -279,15 +315,15 @@ Entidade fraca, relacionamento 1:1 opcional com pedido.
 | --- | --- | --- | --- | --- | --- |
 | id | INTEGER | — | PK | Sim | Identificador único da entrega |
 | pedido_id | INTEGER | — | FK → pedido.id, CD | Sim | Pedido de delivery correspondente (único — cada pedido tem no máx. 1 entrega) |
-| entregador_id | INTEGER | — | FK → funcionario.id | Sim | Funcionário (entregador) responsável pelo trajeto |
+| entregador_id | INTEGER | — | FK → funcionario.id | Não | Funcionário (entregador) responsável pelo trajeto. Pode ser definido depois do registro do pedido; é exigido para o pedido passar a `SAIU_PARA_ENTREGA` |
 | endereco_logradouro | VARCHAR | 150 | — | Sim | Rua/avenida de destino da entrega |
 | endereco_numero | VARCHAR | 10 | — | Sim | Número do endereço de destino |
 | endereco_bairro | VARCHAR | 100 | — | Sim | Bairro de destino |
 | endereco_cidade | VARCHAR | 100 | — | Sim | Cidade de destino |
 | endereco_cep | VARCHAR | 9 | — | Sim | CEP de destino |
 | taxa_entrega | DECIMAL | 10,2 | — | Sim | Valor cobrado pela entrega, conforme distância |
-| data_hora_saida | TIMESTAMP | — | — | Não | Momento em que o entregador saiu para o trajeto |
-| data_hora_entrega | TIMESTAMP | — | — | Não | Momento em que a entrega foi concluída |
+| data_hora_saida | TIMESTAMPTZ | — | — | Não | Momento em que o entregador saiu para o trajeto |
+| data_hora_entrega | TIMESTAMPTZ | — | — | Não | Momento em que a entrega foi concluída |
 
 ## avaliacao_pedido
 
@@ -299,4 +335,4 @@ Entidade fraca, relacionamento 1:1 opcional com pedido.
 | pedido_id | INTEGER | — | FK → pedido.id, CD | Sim | Pedido avaliado (único — no máx. 1 avaliação por pedido) |
 | nota | INTEGER | — | — | Sim | Nota de 1 a 5 atribuída pelo cliente |
 | comentario | TEXT | — | — | Não | Comentário livre sobre o atendimento/pedido |
-| data_hora | TIMESTAMP | — | — | Sim | Momento em que a avaliação foi registrada |
+| data_hora | TIMESTAMPTZ | — | — | Sim | Momento em que a avaliação foi registrada |

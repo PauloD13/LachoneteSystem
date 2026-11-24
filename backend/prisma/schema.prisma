@@ -5,8 +5,10 @@
 // banco (é ele que roda no container do Postgres no deploy). O Prisma
 // aqui é usado apenas como CLIENTE TIPADO (`prisma generate`) — nunca
 // rode `prisma migrate` contra este schema, pois ele não conseguiria
-// representar fielmente os triggers de especialização (item_vendavel)
-// nem o índice único parcial de cupom, que só existem no script SQL.
+// representar fielmente os triggers (especialização de item_vendavel,
+// status do pedido), os CHECKs nem os índices únicos parciais, que só
+// existem no script SQL. Pelo mesmo motivo os índices comuns (ix_*) não
+// são repetidos aqui: o client não precisa deles para gerar os tipos.
 //
 // Convenção de nomenclatura: campos em camelCase no TypeScript, mapeados
 // via @map/@@map para as colunas/tabelas em snake_case do banco.
@@ -30,7 +32,7 @@ model Cliente {
   enderecoPadraoBairro     String?  @map("endereco_padrao_bairro") @db.VarChar(100)
   enderecoPadraoCidade     String?  @map("endereco_padrao_cidade") @db.VarChar(100)
   enderecoPadraoCep        String?  @map("endereco_padrao_cep") @db.VarChar(9)
-  criadoEm                 DateTime @default(now()) @map("criado_em") @db.Timestamp(6)
+  criadoEm                 DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
 
   pedidos Pedido[]
 
@@ -57,13 +59,14 @@ model Categoria {
 }
 
 /// Supertipo da especialização total/disjunta Produto/Combo.
-/// `tipo` é mantido consistente pelos triggers definidos em
-/// database/init/001_schema.sql (trg_produto_set_tipo / trg_combo_set_tipo).
+/// `tipo` e a regra "existe em exatamente uma das filhas" são garantidos
+/// pelos triggers de database/init/001_schema.sql.
 model ItemVendavel {
   id    Int     @id @default(autoincrement())
   nome  String  @db.VarChar(150)
   preco Decimal @db.Decimal(10, 2)
   tipo  String  @db.VarChar(10)
+  ativo Boolean @default(true)
 
   produto     Produto?
   combo       Combo?
@@ -127,6 +130,7 @@ model Adicional {
   id    Int     @id @default(autoincrement())
   nome  String  @db.VarChar(50)
   preco Decimal @db.Decimal(10, 2)
+  ativo Boolean @default(true)
 
   itensPedidoAdicional ItemPedidoAdicional[]
 
@@ -181,10 +185,15 @@ model Cargo {
 }
 
 model Funcionario {
-  id       Int     @id @default(autoincrement())
-  nome     String  @db.VarChar(150)
-  telefone String? @db.VarChar(20)
-  email    String? @db.VarChar(150)
+  id        Int     @id @default(autoincrement())
+  nome      String  @db.VarChar(150)
+  telefone  String? @db.VarChar(20)
+  email     String? @db.VarChar(150)
+  ativo     Boolean @default(true)
+  login     String? @unique @db.VarChar(50)
+  /// Nunca sai nas respostas da API: o client é criado com `omit` global
+  /// para este campo (ver src/lib/prisma.ts).
+  senhaHash String? @map("senha_hash") @db.VarChar(255)
 
   funcionarioCargos FuncionarioCargo[]
   pedidosAtendidos  Pedido[]           @relation("PedidoAtendente")
@@ -201,7 +210,7 @@ model FuncionarioCargo {
   dataInicio    DateTime  @map("data_inicio") @db.Date
   dataFim       DateTime? @map("data_fim") @db.Date
 
-  funcionario Funcionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+  funcionario Funcionario @relation(fields: [funcionarioId], references: [id])
   cargo       Cargo       @relation(fields: [cargoId], references: [id])
 
   @@map("funcionario_cargo")
@@ -260,13 +269,17 @@ model FormaPagamento {
 
 model Pedido {
   id          Int      @id @default(autoincrement())
-  dataHora    DateTime @default(now()) @map("data_hora") @db.Timestamp(6)
+  dataHora    DateTime @default(now()) @map("data_hora") @db.Timestamptz(6)
   canal       String   @db.VarChar(10)
   clienteId   Int?     @map("cliente_id")
   mesaId      Int?     @map("mesa_id")
   atendenteId Int      @map("atendente_id")
   cupomId     Int?     @map("cupom_id")
   observacoes String?
+  /// Atributo derivado, SOMENTE LEITURA para a aplicação: é o trigger
+  /// trg_status_historico_atualiza_pedido que o mantém igual ao último
+  /// registro de statusHistorico (que continua sendo a fonte da verdade).
+  statusAtual String   @default("RECEBIDO") @map("status_atual") @db.VarChar(20)
 
   cliente   Cliente?    @relation(fields: [clienteId], references: [id])
   mesa      Mesa?       @relation(fields: [mesaId], references: [id])
@@ -278,9 +291,6 @@ model Pedido {
   pagamentos      PedidoPagamento[]
   entrega         Entrega?
   avaliacao       AvaliacaoPedido?
-
-  /// Status atual NÃO é uma coluna — é sempre o último registro de
-  /// statusHistorico (ordenado por dataHora).
 
   @@map("pedido")
 }
@@ -322,7 +332,7 @@ model StatusPedidoHistorico {
   id       Int      @id @default(autoincrement())
   pedidoId Int      @map("pedido_id")
   status   String   @db.VarChar(20)
-  dataHora DateTime @default(now()) @map("data_hora") @db.Timestamp(6)
+  dataHora DateTime @default(now()) @map("data_hora") @db.Timestamptz(6)
 
   pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
 
@@ -331,10 +341,11 @@ model StatusPedidoHistorico {
 
 /// Associativa N:N — um pedido pode ser pago com múltiplas formas simultaneamente.
 model PedidoPagamento {
-  id               Int     @id @default(autoincrement())
-  pedidoId         Int     @map("pedido_id")
-  formaPagamentoId Int     @map("forma_pagamento_id")
-  valorPago        Decimal @map("valor_pago") @db.Decimal(10, 2)
+  id               Int       @id @default(autoincrement())
+  pedidoId         Int       @map("pedido_id")
+  formaPagamentoId Int       @map("forma_pagamento_id")
+  valorPago        Decimal   @map("valor_pago") @db.Decimal(10, 2)
+  estornadoEm      DateTime? @map("estornado_em") @db.Timestamptz(6)
 
   pedido         Pedido         @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   formaPagamento FormaPagamento @relation(fields: [formaPagamentoId], references: [id])
@@ -347,18 +358,18 @@ model PedidoPagamento {
 model Entrega {
   id                 Int       @id @default(autoincrement())
   pedidoId           Int       @unique @map("pedido_id")
-  entregadorId       Int       @map("entregador_id")
+  entregadorId       Int?      @map("entregador_id")
   enderecoLogradouro String    @map("endereco_logradouro") @db.VarChar(150)
   enderecoNumero     String    @map("endereco_numero") @db.VarChar(10)
   enderecoBairro     String    @map("endereco_bairro") @db.VarChar(100)
   enderecoCidade     String    @map("endereco_cidade") @db.VarChar(100)
   enderecoCep        String    @map("endereco_cep") @db.VarChar(9)
   taxaEntrega        Decimal   @map("taxa_entrega") @db.Decimal(10, 2)
-  dataHoraSaida      DateTime? @map("data_hora_saida") @db.Timestamp(6)
-  dataHoraEntrega    DateTime? @map("data_hora_entrega") @db.Timestamp(6)
+  dataHoraSaida      DateTime? @map("data_hora_saida") @db.Timestamptz(6)
+  dataHoraEntrega    DateTime? @map("data_hora_entrega") @db.Timestamptz(6)
 
-  pedido     Pedido      @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  entregador Funcionario @relation("EntregaEntregador", fields: [entregadorId], references: [id])
+  pedido     Pedido       @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  entregador Funcionario? @relation("EntregaEntregador", fields: [entregadorId], references: [id])
 
   @@map("entrega")
 }
@@ -369,7 +380,7 @@ model AvaliacaoPedido {
   pedidoId   Int      @unique @map("pedido_id")
   nota       Int
   comentario String?
-  dataHora   DateTime @default(now()) @map("data_hora") @db.Timestamp(6)
+  dataHora   DateTime @default(now()) @map("data_hora") @db.Timestamptz(6)
 
   pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
 

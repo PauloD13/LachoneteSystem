@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import * as funcionarioCargoService from "../services/funcionarioCargo.service.js";
+import { usuarioDe } from "../middlewares/autenticacao.js";
 import {
   funcionarioIdParamSchema,
   vinculoParamSchema,
@@ -27,11 +28,14 @@ export async function listar(req: Request, res: Response): Promise<void> {
 
 export async function encerrar(req: Request, res: Response): Promise<void> {
   const { funcionarioId, vinculoId } = vinculoParamSchema.parse(req.params);
-  const { dataFim } = encerrarVinculoSchema.parse(req.body);
+  // PATCH sem corpo é válido aqui ("encerra hoje"): no Express 5, req.body
+  // fica undefined quando nada é enviado.
+  const { dataFim } = encerrarVinculoSchema.parse(req.body ?? {});
   const vinculo = await funcionarioCargoService.encerrar(
     funcionarioId,
     vinculoId,
     dataFim,
+    usuarioDe(req).id,
   );
   res.status(200).json(vinculo);
 }

@@ -32,3 +32,6 @@ README.md
 Dockerfile
 docker-compose.yml
 .dockerignore
+
+# Testes (não entram na imagem)
+tests/
