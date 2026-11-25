@@ -22,7 +22,11 @@ app.use(limiteGlobal);
 app.use(express.json({ limit: "100kb" }));
 
 //SECTION - definindo os prefixos de rotas
-app.use(routes);
+// Toda a API fica sob /api. O resto dos caminhos é das telas do frontend
+// (etapa F8): como API e telas vão morar no mesmo endereço, sem o prefixo
+// a tela /clientes e a rota GET /clientes da API colidiriam — dar F5 na tela
+// devolveria o JSON da API em vez da página.
+app.use("/api", routes);
 
 app.use(rotaNaoEncontrada);
 app.use(errorHandler);
