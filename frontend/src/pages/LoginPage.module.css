@@ -3,30 +3,30 @@
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: var(--espaco-5);
+  padding: var(--space-5);
 }
 
 .cartao {
   width: min(100%, 22rem);
   display: flex;
   flex-direction: column;
-  gap: var(--espaco-2);
-  padding: var(--espaco-6);
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
+  gap: var(--space-2);
+  padding: var(--space-6);
+  background: var(--surface-200);
+  border: 1px solid var(--surface-300);
+  border-radius: var(--radius-lg);
 }
 
 .cartao h1 {
   font-size: 1.25rem;
-  margin: 0 0 var(--espaco-3);
+  margin: 0 0 var(--space-3);
 }
 
 .cartao button {
-  margin-top: var(--espaco-3);
+  margin-top: var(--space-3);
 }
 
 .erro {
   margin: 0;
-  color: var(--cor-erro);
+  color: var(--danger-text);
 }

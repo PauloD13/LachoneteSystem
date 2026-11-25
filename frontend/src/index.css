@@ -1,3 +1,12 @@
-/* Ponto de entrada do CSS global: só importa as camadas, nesta ordem. */
+/*
+ * Ponto de entrada do CSS global, nesta ordem:
+ *   1. tokens.css  — o design system Sabor & Cia: cores (claro/escuro),
+ *                    espaços, raios, sombras e fontes
+ *   2. bundle.css  — componentes do design system (classes sc-*) e movimento
+ *   3. base.css    — o que o design system não cobre: reset dos elementos
+ *                    HTML e utilitários do sistema
+ * Estilos de uma tela específica ficam no .module.css da própria tela.
+ */
 @import "./styles/tokens.css";
+@import "./styles/bundle.css";
 @import "./styles/base.css";

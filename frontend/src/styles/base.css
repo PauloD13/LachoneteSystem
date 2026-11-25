@@ -1,21 +1,33 @@
 /*
- * Base: um "reset" leve (navegadores têm estilos padrão diferentes) e o
- * visual padrão dos elementos HTML. Estilos de uma tela específica ficam
- * no .module.css da própria tela, não aqui.
+ * Complementos do design system Sabor & Cia. Usa só os tokens de tokens.css
+ * e nunca redefine as classes sc-* (essas são do bundle.css).
  */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+
+html {
+  color-scheme: light;
+  background: var(--surface-100);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
-  font-family: var(--fonte-base);
-  font-size: var(--tamanho-base);
-  line-height: 1.5;
-  color: var(--cor-texto);
-  background: var(--cor-fundo);
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 
 img,
@@ -29,42 +41,50 @@ select,
 textarea,
 button {
   font: inherit;
-}
-
-input,
-select,
-textarea {
-  padding: var(--espaco-2) var(--espaco-3);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
-  background: var(--cor-superficie);
   color: inherit;
 }
 
-button {
-  padding: var(--espaco-2) var(--espaco-4);
-  border: 1px solid transparent;
-  border-radius: var(--raio);
-  background: var(--cor-primaria);
-  color: var(--cor-primaria-texto);
-  cursor: pointer;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Foco sempre visível para quem navega pelo teclado. */
-:focus-visible {
-  outline: none;
-  box-shadow: var(--foco);
-}
-
 a {
-  color: var(--cor-primaria);
+  color: var(--ink);
 }
 
-.carregando {
-  color: var(--cor-texto-suave);
+/* Foco sempre visível para quem navega pelo teclado (o design system já
+   cuida dos seus componentes; isto cobre links e elementos simples). */
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Texto só para leitores de tela. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Campo de seleção com a mesma aparência do sc-input. */
+select.sc-input {
+  appearance: none;
+  padding-right: var(--space-7);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink-muted) 50%),
+    linear-gradient(135deg, var(--ink-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 22px) 50%,
+    calc(100% - 16px) 50%;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+}
+
+textarea.sc-input {
+  min-height: 96px;
+  resize: vertical;
 }

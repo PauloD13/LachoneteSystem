@@ -9,10 +9,10 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--espaco-4);
-  padding: var(--espaco-3) var(--espaco-5);
-  background: var(--cor-superficie);
-  border-bottom: 1px solid var(--cor-borda);
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  background: var(--surface-200);
+  border-bottom: 1px solid var(--surface-300);
 }
 
 .marca {
@@ -21,7 +21,7 @@
 
 .menu {
   display: flex;
-  gap: var(--espaco-3);
+  gap: var(--space-3);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -35,10 +35,10 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: var(--espaco-3);
+  gap: var(--space-3);
 }
 
 .conteudo {
   flex: 1;
-  padding: var(--espaco-5);
+  padding: var(--space-5);
 }

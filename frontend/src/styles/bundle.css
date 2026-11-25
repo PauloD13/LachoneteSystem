@@ -1,0 +1,565 @@
+/* Sabor & Cia — component styles. Requires this system's tokens.css.
+   Blocos se separam por uma SOMBRA SUTIL EMBAIXO e pelo tom cinza do cartão, nunca por borda.
+   A única borda é a dos campos (line-strong), por acessibilidade. Nada de transparência em cores. */
+
+.sc-root,
+.sc-root * {
+  box-sizing: border-box;
+}
+.sc-root {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--surface-100);
+  font-size: 16px;
+  line-height: 24px;
+}
+.sc-tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Button ---------- */
+.sc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font: 800 16px/20px var(--font-sans);
+  min-height: 44px;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  border: 0;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+}
+.sc-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+.sc-btn:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.sc-btn--primary {
+  background: var(--brand);
+  color: var(--on-brand);
+  box-shadow: var(--shadow-sm);
+}
+.sc-btn--primary:hover {
+  background: var(--brand-hover);
+}
+.sc-btn--secondary {
+  background: var(--brand-tint);
+  color: var(--on-brand-tint);
+}
+.sc-btn--secondary:hover {
+  box-shadow: var(--shadow-sm);
+}
+.sc-btn--ghost {
+  background: var(--surface-300);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.sc-btn--ghost:hover {
+  box-shadow: var(--shadow-card);
+}
+.sc-btn--danger {
+  background: var(--status-cancelado-bg);
+  color: var(--status-cancelado-fg);
+  box-shadow: var(--shadow-sm);
+}
+.sc-btn--lg {
+  font-size: 18px;
+  line-height: 24px;
+  min-height: 56px;
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-lg);
+}
+.sc-btn--block {
+  width: 100%;
+}
+.sc-btn[disabled],
+.sc-btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* ---------- Input ---------- */
+.sc-field {
+  display: grid;
+  gap: var(--space-1);
+}
+.sc-field__label {
+  font: 800 14px/20px var(--font-sans);
+  color: var(--ink);
+}
+.sc-field__help {
+  font: 500 14px/20px var(--font-sans);
+  color: var(--ink-muted);
+}
+.sc-field__error {
+  font: 700 14px/20px var(--font-sans);
+  color: var(--danger-text);
+}
+.sc-input {
+  font: 600 16px/24px var(--font-sans);
+  color: var(--ink);
+  background: var(--surface-200);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-4);
+  width: 100%;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.sc-input::placeholder {
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+.sc-input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+  border-color: var(--brand);
+}
+.sc-input[aria-invalid="true"] {
+  border-color: var(--danger-text);
+}
+
+/* ---------- StatusBadge (cores sólidas, cantos quase retos) ---------- */
+.sc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: 800 13px/16px var(--font-sans);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.sc-badge--recebido {
+  background: var(--status-recebido-bg);
+  color: var(--status-recebido-fg);
+}
+.sc-badge--preparo {
+  background: var(--status-preparo-bg);
+  color: var(--status-preparo-fg);
+}
+.sc-badge--pronto {
+  background: var(--status-pronto-bg);
+  color: var(--status-pronto-fg);
+}
+.sc-badge--entrega {
+  background: var(--status-entrega-bg);
+  color: var(--status-entrega-fg);
+}
+.sc-badge--entregue {
+  background: var(--status-entregue-bg);
+  color: var(--status-entregue-fg);
+}
+.sc-badge--cancelado {
+  background: var(--status-cancelado-bg);
+  color: var(--status-cancelado-fg);
+}
+
+/* ---------- Chip / Promo ---------- */
+.sc-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  font: 700 15px/20px var(--font-sans);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 0;
+  cursor: pointer;
+  background: var(--surface-300);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.sc-chip[aria-pressed="true"] {
+  background: var(--surface-100);
+  color: var(--ink);
+  font-weight: 800;
+  box-shadow: none;
+}
+.sc-chip[aria-pressed="true"]::before {
+  content: "✓";
+  margin-right: var(--space-1);
+}
+.sc-chip:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.sc-promo {
+  display: inline-flex;
+  font: 800 13px/16px var(--font-sans);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--mustard);
+  color: var(--on-mustard);
+}
+
+/* ---------- ProductCard ----------
+   O botão "Adicionar" é o ÚNICO destaque colorido do cartão: preço, chips e etiqueta ficam neutros. */
+.sc-product {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--surface-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+.sc-product:hover {
+  box-shadow: var(--shadow-pop);
+  transform: translateY(-1px);
+}
+.sc-product__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.sc-product__name {
+  font: 800 18px/24px var(--font-sans);
+  margin: 0;
+}
+.sc-product__desc {
+  font: 500 14px/20px var(--font-sans);
+  color: var(--ink-muted);
+  margin: 0;
+}
+.sc-product__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.sc-product .sc-promo {
+  background: var(--surface-300);
+  color: var(--ink);
+}
+.sc-product__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: auto;
+}
+.sc-price {
+  font: 800 18px/24px var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.sc-price--brand {
+  color: var(--brand);
+}
+.sc-price--strike {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink-muted);
+  text-decoration: line-through;
+}
+
+/* ---------- OrderTicket ---------- */
+.sc-ticket {
+  --sc-status: var(--status-entregue-bg);
+  background: var(--surface-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  border-top: var(--stripe) solid var(--sc-status); /* a listra de status: a única faixa colorida do cartão */
+}
+.sc-ticket--recebido {
+  --sc-status: var(--status-recebido-bg);
+}
+.sc-ticket--preparo {
+  --sc-status: var(--status-preparo-bg);
+}
+.sc-ticket--pronto {
+  --sc-status: var(--status-pronto-bg);
+}
+.sc-ticket--entrega {
+  --sc-status: var(--status-entrega-bg);
+}
+.sc-ticket--entregue {
+  --sc-status: var(--status-entregue-bg);
+}
+.sc-ticket--cancelado {
+  --sc-status: var(--status-cancelado-bg);
+}
+.sc-ticket__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-300);
+}
+.sc-ticket__number {
+  font: 600 22px/26px var(--font-display);
+}
+.sc-ticket__meta {
+  font: 600 14px/20px var(--font-sans);
+  color: var(--ink-muted);
+}
+.sc-ticket__items {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-4) var(--space-5);
+  display: grid;
+  gap: var(--space-4);
+}
+.sc-ticket__item {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  column-gap: var(--space-2);
+}
+.sc-ticket__qty {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-300);
+  font: 800 15px/1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+.sc-ticket__name {
+  font: 800 16px/32px var(--font-sans);
+}
+.sc-ticket__extra {
+  grid-column: 2;
+  font: 600 14px/20px var(--font-sans);
+  color: var(--ink-muted);
+}
+.sc-ticket__note {
+  grid-column: 2;
+  justify-self: start;
+  margin-top: var(--space-1);
+  font: 700 14px/20px var(--font-sans);
+  color: var(--on-brand-tint);
+  background: var(--brand-tint);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+}
+.sc-ticket__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-5) var(--space-5);
+}
+
+/* ======================================================================
+   Movimento — durações e curvas (ver "Interações e movimento" no guia)
+   rápido 120ms: toque, alternâncias · base 200ms: hover, chips, troca de cor
+   entrada 280ms: folhas, avisos, comandas chegando · saída 180ms
+   ====================================================================== */
+.sc-root {
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-in: 280ms;
+  --dur-out: 180ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); /* entra desacelerando */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1); /* sai acelerando */
+  --ease-pop: cubic-bezier(
+    0.3,
+    1.5,
+    0.5,
+    1
+  ); /* pequeno quique, só em contadores */
+}
+.sc-chip,
+.sc-badge,
+.sc-ticket,
+.sc-input {
+  transition:
+    background-color var(--dur-base) ease,
+    color var(--dur-base) ease,
+    border-color var(--dur-base) ease,
+    box-shadow var(--dur-base) ease;
+}
+.sc-ticket {
+  transition:
+    border-top-color 300ms ease,
+    box-shadow var(--dur-base) ease;
+}
+
+/* Folha inferior (bottom sheet) e fundo escurecido */
+@keyframes sc-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes sc-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.sc-sheet-enter {
+  animation: sc-sheet-in var(--dur-in) var(--ease-out) both;
+}
+.sc-scrim {
+  background: rgba(23, 18, 14, 0.32);
+  animation: sc-fade-in var(--dur-in) ease both;
+}
+
+/* Aviso (toast): sobe da base, some sozinho em 3 s */
+@keyframes sc-toast-in {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.sc-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--ink);
+  color: var(--surface-100);
+  box-shadow: var(--shadow-pop);
+  font: 700 15px/20px var(--font-sans);
+  animation: sc-toast-in var(--dur-in) var(--ease-out) both;
+}
+.sc-toast--erro {
+  background: var(--status-cancelado-bg);
+  color: var(--status-cancelado-fg);
+}
+
+/* Contador que pula ao mudar (carrinho, quantidade). Alterne -a/-b para repetir. */
+@keyframes sc-bump-a {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes sc-bump-b {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.sc-bump-a {
+  animation: sc-bump-a 320ms var(--ease-pop);
+}
+.sc-bump-b {
+  animation: sc-bump-b 320ms var(--ease-pop);
+}
+
+/* Comanda chegando numa coluna / item novo numa lista */
+@keyframes sc-enter {
+  from {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.sc-enter {
+  animation: sc-enter var(--dur-in) var(--ease-out) both;
+  box-shadow: var(--shadow-pop);
+}
+
+/* Troca de tela (empurrar): desliza 24px e aparece */
+@keyframes sc-screen-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.sc-screen-enter {
+  animation: sc-screen-in 220ms var(--ease-out) both;
+}
+
+/* Erro em campo: tremida curta */
+@keyframes sc-shake {
+  0%,
+  100% {
+    transform: none;
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+.sc-shake {
+  animation: sc-shake 240ms ease 1;
+}
+
+/* Carregando: giro no botão e esqueleto que pulsa (sem brilho/gradiente) */
+@keyframes sc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.sc-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 3px solid currentColor;
+  border-right-color: transparent;
+  animation: sc-spin 700ms linear infinite;
+}
+@keyframes sc-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+.sc-skeleton {
+  background: var(--surface-300);
+  border-radius: var(--radius-sm);
+  animation: sc-pulse 1.2s ease-in-out infinite;
+}
+
+/* Quem pediu menos movimento recebe só a troca de estado, sem deslocamentos */
+@media (prefers-reduced-motion: reduce) {
+  .sc-root *,
+  .sc-root *::before,
+  .sc-root *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
