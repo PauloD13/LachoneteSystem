@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useConsulta } from "../../../hooks/useConsulta";
 import { useAcao } from "../../../hooks/useAcao";
+import { useSelecaoNaLista } from "../../../hooks/useSelecaoNaLista";
 import { adicionais, categorias } from "../../../services/cadastros";
 import { Botao } from "../../../components/ui/Botao";
 import { Campo } from "../../../components/ui/Campo";
@@ -21,15 +22,11 @@ export function AdicionaisAba({
   novo: boolean;
   aoAbrirNovo(v: boolean): void;
 }) {
-  const [selecionado, setSelecionado] = useState<number | null>(null);
   const lista = useConsulta("cardapio:adicionais", (s) =>
     adicionais.listar({ tamanhoPagina: 100 }, s),
   );
-  const atual = novo
-    ? null
-    : (lista.dados?.dados.find((a) => a.id === selecionado) ??
-      lista.dados?.dados[0] ??
-      null);
+  const selecao = useSelecaoNaLista(lista.dados?.dados, lista.carregando);
+  const atual = novo ? null : selecao.atual;
 
   return (
     <div className="ui-paineis">
@@ -53,7 +50,7 @@ export function AdicionaisAba({
               aria-current={atual?.id === a.id}
               onClick={() => {
                 aoAbrirNovo(false);
-                setSelecionado(a.id);
+                selecao.selecionar(a.id);
               }}
             >
               <span
@@ -86,7 +83,7 @@ export function AdicionaisAba({
           adicional={novo ? null : atual}
           aoSalvar={(a) => {
             aoAbrirNovo(false);
-            setSelecionado(a.id);
+            selecao.aposSalvar(a);
             lista.recarregar();
           }}
         />

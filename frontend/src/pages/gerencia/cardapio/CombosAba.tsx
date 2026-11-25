@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useConsulta } from "../../../hooks/useConsulta";
 import { useAcao } from "../../../hooks/useAcao";
+import { useSelecaoNaLista } from "../../../hooks/useSelecaoNaLista";
 import { combos, produtos } from "../../../services/cadastros";
 import { Botao } from "../../../components/ui/Botao";
 import { Campo } from "../../../components/ui/Campo";
@@ -26,15 +27,11 @@ export function CombosAba({
   novo: boolean;
   aoAbrirNovo(v: boolean): void;
 }) {
-  const [selecionado, setSelecionado] = useState<number | null>(null);
   const lista = useConsulta("cardapio:combos", (s) =>
     combos.listar({ tamanhoPagina: 100 }, s),
   );
-  const atual = novo
-    ? null
-    : (lista.dados?.dados.find((c) => c.id === selecionado) ??
-      lista.dados?.dados[0] ??
-      null);
+  const selecao = useSelecaoNaLista(lista.dados?.dados, lista.carregando);
+  const atual = novo ? null : selecao.atual;
 
   return (
     <div className="ui-paineis">
@@ -63,7 +60,7 @@ export function CombosAba({
                 aria-current={atual?.id === c.id}
                 onClick={() => {
                   aoAbrirNovo(false);
-                  setSelecionado(c.id);
+                  selecao.selecionar(c.id);
                 }}
               >
                 <span
@@ -109,7 +106,7 @@ export function CombosAba({
           combo={novo ? null : atual}
           aoSalvar={(c) => {
             aoAbrirNovo(false);
-            setSelecionado(c.id);
+            selecao.aposSalvar(c);
             lista.recarregar();
           }}
         />
