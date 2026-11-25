@@ -1,12 +1,10 @@
 import type { Request, Response } from "express";
 import * as adicionalService from "../services/adicional.service.js";
-import {
-  idParamSchema,
-  listarComAtivoQuerySchema,
-} from "../validators/comum.js";
+import { idParamSchema } from "../validators/comum.js";
 import {
   criarAdicionalSchema,
   atualizarAdicionalSchema,
+  listarAdicionaisQuerySchema,
 } from "../validators/adicional.validator.js";
 
 export async function criar(req: Request, res: Response): Promise<void> {
@@ -15,7 +13,7 @@ export async function criar(req: Request, res: Response): Promise<void> {
 }
 
 export async function listar(req: Request, res: Response): Promise<void> {
-  const filtros = listarComAtivoQuerySchema.parse(req.query);
+  const filtros = listarAdicionaisQuerySchema.parse(req.query);
   res.status(200).json(await adicionalService.listar(filtros));
 }
 

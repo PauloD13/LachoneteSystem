@@ -15,11 +15,28 @@ export async function listar(pagina: PaginacaoQuery) {
   const [dados, total] = await prisma.$transaction([
     prisma.fornecedor.findMany({
       orderBy: [{ nome: "asc" }, { id: "asc" }],
+      include: {
+        _count: { select: { ingredientes: true } },
+        // Prévia para a lista ("Pão, Carne, Queijo e mais 2").
+        ingredientes: {
+          select: { nome: true },
+          orderBy: { nome: "asc" },
+          take: 3,
+        },
+      },
       ...recorte(pagina),
     }),
     prisma.fornecedor.count(),
   ]);
-  return paginar(dados, total, pagina);
+  return paginar(
+    dados.map(({ _count, ingredientes, ...fornecedor }) => ({
+      ...fornecedor,
+      totalIngredientes: _count.ingredientes,
+      ingredientesPrevia: ingredientes.map((i) => i.nome),
+    })),
+    total,
+    pagina,
+  );
 }
 
 // Traz junto os ingredientes abastecidos por ele (relacionamento 1:N).

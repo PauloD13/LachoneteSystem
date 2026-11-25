@@ -16,6 +16,12 @@ export async function criar(req: Request, res: Response): Promise<void> {
   res.status(201).json(await pedidoService.criar(dados, usuarioDe(req)));
 }
 
+// Mesmo corpo do POST /pedidos; nada é gravado.
+export async function simular(req: Request, res: Response): Promise<void> {
+  const dados = criarPedidoSchema.parse(req.body);
+  res.status(200).json(await pedidoService.simular(dados, usuarioDe(req)));
+}
+
 export async function listar(req: Request, res: Response): Promise<void> {
   const filtros = listarPedidosQuerySchema.parse(req.query);
   res.status(200).json(await pedidoService.listar(filtros));

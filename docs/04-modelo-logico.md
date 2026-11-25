@@ -156,6 +156,7 @@ combo_item(id, combo_id→combo, produto_id→produto, quantidade)
 variacao(id, produto_id→produto, nome, preco_adicional)
 
 adicional(id, nome, preco, ativo)
+adicional_categoria(id, adicional_id→adicional, categoria_id→categoria)   -- UNIQUE(adicional_id, categoria_id)
 
 fornecedor(id, nome, telefone, email)
 

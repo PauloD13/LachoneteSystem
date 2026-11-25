@@ -334,16 +334,17 @@ pequenas por natureza e voltam como lista simples.
 | --- | --- | --- |
 | — | `GET /api/health` | Público. `200` se a API e o banco respondem; `503` se o banco está fora |
 | Acesso | `/auth` | `POST /login`, `GET /me` (quem sou eu e meus cargos), `PATCH /senha` (trocar a própria senha) |
-| Cadastros | `/clientes` | `?busca=` (nome, telefone ou e-mail); `GET /clientes/:id/pedidos` — histórico de pedidos do cliente |
+| Cadastros | `/clientes` | `?busca=` (nome, telefone ou e-mail). Cada cliente da lista traz `totalPedidos` e `ultimoPedidoEm`; o detalhe traz `resumo` (`totalPedidos`, `totalGasto`, `ticketMedio`, `notaMedia`). `GET /clientes/:id/pedidos` — histórico de pedidos do cliente |
 | Cadastros | `/funcionarios` | Filtros `?ativo=` e `?cargo=entregador`; aceita `login`/`senha` (`login: null` remove o acesso). Sub-rota `/funcionarios/:funcionarioId/cargos`: `POST` abre vínculo, `GET` histórico, `PATCH /:vinculoId` encerra |
-| Cadastros | `/cargos`, `/mesas`, `/formas-pagamento` | `/mesas?ativa=`. Os quatro cargos-base não podem ser alterados |
-| Cardápio | `/categorias`, `/adicionais` | `/adicionais?ativo=` |
-| Cardápio | `/produtos` | Filtros `?ativo=` e `?categoriaId=`. Sub-rotas `/produtos/:produtoId/variacoes` (`POST`, `GET`, `PATCH /:variacaoId`, `DELETE /:variacaoId`) e `/produtos/:produtoId/ingredientes` — ficha técnica (`GET`, `PUT /:ingredienteId`, `DELETE /:ingredienteId`) |
+| Cadastros | `/cargos`, `/mesas`, `/formas-pagamento` | `/mesas?ativa=`; cada mesa traz `pedidoAberto` (pedido de hoje ainda em andamento ou com saldo a pagar; `null` = livre). Os quatro cargos-base não podem ser alterados |
+| Cardápio | `/categorias` | — |
+| Cardápio | `/adicionais` | Corpo traz `categoriaIds` (categorias em que é oferecido, mínimo 1; no `PATCH` substitui a lista). Filtros `?ativo=`, `?categoriaId=` e `?itemVendavelId=` (adicionais que cabem num produto ou combo) |
+| Cardápio | `/produtos` | Filtros `?ativo=`, `?categoriaId=` e `?busca=`. Cada produto traz `precoVigente` (com a melhor promoção do dia), `promocaoVigente` e `totalVariacoes`. Sub-rotas `/produtos/:produtoId/variacoes` (`POST`, `GET`, `PATCH /:variacaoId`, `DELETE /:variacaoId`) e `/produtos/:produtoId/ingredientes` — ficha técnica (`GET`, `PUT /:ingredienteId`, `DELETE /:ingredienteId`) |
 | Cardápio | `/combos` | Corpo traz `itens: [{ produtoId, quantidade }]` (mínimo de 2 produtos); `?ativo=` |
 | Cardápio | `/promocoes` | Corpo traz `produtoIds`; `GET /promocoes?ativaEm=AAAA-MM-DD` |
 | Cardápio | `/cupons` | Código normalizado em maiúsculas |
-| Estoque | `/fornecedores`, `/ingredientes` | `/ingredientes?fornecedorId=` |
-| Operação | `/pedidos` | `POST /`, `GET /` (filtros `status`, `clienteId`, `dataInicio`, `dataFim`), `GET /:id`, `POST /:id/status`, `POST /:id/pagamentos`, `PATCH /:id/entrega` (define o entregador), `POST /:id/avaliacao` |
+| Estoque | `/fornecedores`, `/ingredientes` | `/ingredientes?fornecedorId=&busca=&ordem=nome\|estoque` (estoque = menor primeiro); cada ingrediente traz `usadoEm` (nº de produtos) e o detalhe, `produtos`. Fornecedores trazem `totalIngredientes` e `ingredientesPrevia` |
+| Operação | `/pedidos` | `POST /`, `POST /simulacao` (mesmo corpo; devolve itens precificados e totais sem gravar), `GET /` (filtros `status` — aceita vários, separados por vírgula —, `clienteId`, `mesaId`, `atendenteId`, `entregadorId`, `tipoAtendimento`, `busca` — número do pedido ou nome/telefone do cliente —, `dataInicio`, `dataFim`, `ordem=recentes\|antigos`), `GET /:id`, `POST /:id/status`, `POST /:id/pagamentos`, `PATCH /:id/entrega` (define o entregador), `POST /:id/avaliacao` |
 | Operação | `/relatorios` | `GET /mais-vendidos`, `GET /consumo-ingredientes`, `GET /vendas-por-atendente` — todos com `?dataInicio=AAAA-MM-DD&dataFim=AAAA-MM-DD` |
 
 ### Exemplo: registrar um pedido
@@ -383,7 +384,14 @@ bloco `totais` (`subtotalItens`, `descontoCupom`, `taxaEntrega`, `total`,
 - **Preço congelado**: cada item grava o preço praticado na hora da venda —
   preço-base do produto com a melhor promoção vigente no dia (promoções não
   acumulam), mais o acréscimo da variação. Combo usa o próprio preço.
-  Adicionais são cobrados por unidade do item.
+  Adicionais são cobrados por unidade do item e só entram em itens das
+  categorias em que são oferecidos (num combo, as categorias dos produtos
+  dele).
+- **Simulação**: `POST /pedidos/simulacao` aplica as mesmas regras do
+  registro e devolve preços e totais sem gravar — é o que a tela de
+  fechamento usa para mostrar o total e os erros antes de enviar.
+- **Pagamento opcional no registro**: pode ser lançado depois
+  (`POST /pedidos/:id/pagamentos`), por exemplo ao fim da refeição na mesa.
 - **Cupom**: precisa estar na validade, vale uma vez por cliente e incide
   sobre os itens (não sobre a taxa de entrega). Depois de usado, o tipo e o
   valor do desconto não podem mais ser alterados. Pedido cancelado devolve o

@@ -123,6 +123,21 @@ CREATE TABLE adicional (
 );
 
 -- -----------------------------------------------------------------------------
+-- adicional_categoria (associativa N:N — Adicional x Categoria)
+-- Em quais categorias do cardápio cada adicional pode ser oferecido: "bacon
+-- extra" vale para Lanches, não para Bebidas. Num combo, valem as categorias
+-- dos produtos que o compõem.
+-- -----------------------------------------------------------------------------
+CREATE TABLE adicional_categoria (
+    id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    adicional_id  INTEGER NOT NULL REFERENCES adicional(id) ON DELETE CASCADE,
+    categoria_id  INTEGER NOT NULL REFERENCES categoria(id) ON DELETE CASCADE,
+    UNIQUE (adicional_id, categoria_id)
+);
+
+CREATE INDEX ix_adicional_categoria_categoria ON adicional_categoria (categoria_id);
+
+-- -----------------------------------------------------------------------------
 -- Fornecedor / Ingrediente / produto_ingrediente
 -- -----------------------------------------------------------------------------
 CREATE TABLE fornecedor (

@@ -7,6 +7,8 @@ const pedidoRoutes = Router();
 // ATENDENTE e o ENTREGADOR de um pedido é validado pelo cargo, no service.
 
 pedidoRoutes.post("/", pedidoController.criar);
+// Pré-visualização (preços, totais, erros de regra) sem gravar.
+pedidoRoutes.post("/simulacao", pedidoController.simular);
 pedidoRoutes.get("/", pedidoController.listar);
 pedidoRoutes.get("/:id", pedidoController.buscarPorId);
 

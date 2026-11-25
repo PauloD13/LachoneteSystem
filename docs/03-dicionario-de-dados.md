@@ -112,6 +112,18 @@ mesmo combo.
 | preco | DECIMAL | 10,2 | — | Sim | Preço do adicional |
 | ativo | BOOLEAN | — | — | Sim | `false` = não é mais oferecido; preserva o histórico dos pedidos em que foi usado (padrão `true`) |
 
+## adicional_categoria
+
+Entidade associativa N:N entre adicional e categoria: em quais categorias do
+cardápio cada adicional pode ser oferecido. Num combo, valem as categorias dos
+produtos que o compõem. Restrição: UNIQUE (adicional_id, categoria_id).
+
+| Atributo | Tipo | Tam./Prec. | Chave | Obrigatório | Descrição |
+| --- | --- | --- | --- | --- | --- |
+| id | INTEGER | — | PK | Sim | Identificador único da associação |
+| adicional_id | INTEGER | — | FK → adicional.id | Sim | Adicional oferecido (apagar o adicional apaga a associação) |
+| categoria_id | INTEGER | — | FK → categoria.id | Sim | Categoria em que é oferecido (apagar a categoria apaga a associação) |
+
 ## fornecedor
 
 | Atributo | Tipo | Tam./Prec. | Chave | Obrigatório | Descrição |

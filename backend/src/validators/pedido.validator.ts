@@ -135,12 +135,40 @@ export const avaliarPedidoSchema = z.object({
   comentario: z.string().trim().max(2000).nullish(),
 });
 
+// ?status=RECEBIDO,EM_PREPARO aceita vários (a fila da cozinha, por exemplo).
+const listaDeStatus = z
+  .string()
+  .transform((texto) => texto.split(",").map((s) => s.trim()))
+  .pipe(z.array(statusPedido).min(1).max(STATUS_PEDIDO.length));
+
+export const TIPOS_ATENDIMENTO = [
+  "RETIRADA",
+  "CONSUMO_LOCAL",
+  "ENTREGA",
+] as const;
+
 export const listarPedidosQuerySchema = paginacaoQuerySchema
   .extend({
-    status: statusPedido.optional(),
+    status: listaDeStatus.optional(),
     clienteId: idNaUrl.optional(),
+    mesaId: idNaUrl.optional(),
+    atendenteId: idNaUrl.optional(),
+    entregadorId: idNaUrl.optional(),
+    tipoAtendimento: z
+      .enum(TIPOS_ATENDIMENTO, {
+        error: `tipoAtendimento deve ser um de: ${TIPOS_ATENDIMENTO.join(", ")}.`,
+      })
+      .optional(),
+    // Número do pedido ou parte do nome/telefone do cliente.
+    busca: z.string().trim().min(1).max(100).optional(),
     dataInicio: dia.optional(),
     dataFim: dia.optional(),
+    // recentes (padrão) = mais novos primeiro; antigos = fila (cozinha).
+    ordem: z
+      .enum(["recentes", "antigos"], {
+        error: "ordem deve ser recentes ou antigos.",
+      })
+      .default("recentes"),
   })
   .refine((q) => !q.dataInicio || !q.dataFim || q.dataFim >= q.dataInicio, {
     message: "dataFim não pode ser anterior a dataInicio.",

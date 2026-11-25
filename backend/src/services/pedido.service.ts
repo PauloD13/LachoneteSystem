@@ -5,6 +5,7 @@ import { CARGO, vinculoVigente, type NomeDeCargo } from "../lib/cargos.js";
 import { hojeComoData, inicioDoDia, somarDias } from "../lib/datas.js";
 import { calcularDesconto, estaVigente } from "../lib/desconto.js";
 import { paginar, recorte } from "../lib/paginacao.js";
+import { melhorPreco } from "../lib/precos.js";
 import type { UsuarioAutenticado } from "../middlewares/autenticacao.js";
 import type {
   AvaliarPedidoDTO,
@@ -13,6 +14,7 @@ import type {
   PagamentoDTO,
   StatusPedido,
 } from "../validators/pedido.validator.js";
+import { TIPOS_ATENDIMENTO } from "../validators/pedido.validator.js";
 
 type Decimal = Prisma.Decimal;
 
@@ -215,6 +217,20 @@ interface ItemPrecificado {
   precoUnitarioPraticado: Decimal;
   observacao: string | null;
   adicionais: { adicionalId: number; precoPraticado: Decimal }[];
+  // Só para a simulação mostrar o item (não vão para o banco).
+  exibicao: {
+    nome: string;
+    tipo: string;
+    variacao: { id: number; nome: string } | null;
+    adicionais: string[];
+  };
+}
+
+function subtotalPrecificado(item: ItemPrecificado): Decimal {
+  return item.adicionais
+    .reduce((soma, a) => soma.plus(a.precoPraticado), ZERO)
+    .plus(item.precoUnitarioPraticado)
+    .mul(item.quantidade);
 }
 
 // Define o preço "congelado" de cada item (decisão 4 do MER):
@@ -256,6 +272,7 @@ async function precificarItens(
   const idsAdicionais = [...new Set(itens.flatMap((i) => i.adicionalIds))];
   const adicionais = await tx.adicional.findMany({
     where: { id: { in: idsAdicionais } },
+    include: { categorias: { select: { categoriaId: true } } },
   });
   const adicionalPorId = new Map(adicionais.map((a) => [a.id, a]));
 
@@ -282,15 +299,23 @@ async function precificarItens(
       );
     }
 
+    // Categorias do item: a do produto ou as dos produtos do combo. Decidem
+    // quais adicionais cabem nele.
+    const categoriasDoItem = new Set(
+      vendavel.produto
+        ? [vendavel.produto.categoriaId]
+        : (vendavel.combo?.comboItens.map((ci) => ci.produto.categoriaId) ??
+            []),
+    );
+
     let preco = vendavel.preco;
+    let variacaoEscolhida: { id: number; nome: string } | null = null;
 
     if (vendavel.produto) {
-      for (const { promocao } of vendavel.produto.produtoPromocoes) {
-        const comPromocao = vendavel.preco.minus(
-          calcularDesconto(vendavel.preco, promocao),
-        );
-        preco = Prisma.Decimal.min(preco, comPromocao);
-      }
+      preco = melhorPreco(
+        vendavel.preco,
+        vendavel.produto.produtoPromocoes.map((pp) => pp.promocao),
+      ).preco;
     }
 
     if (item.variacaoId != null) {
@@ -304,7 +329,30 @@ async function precificarItens(
         );
       }
       preco = preco.plus(variacao.precoAdicional);
+      variacaoEscolhida = { id: variacao.id, nome: variacao.nome };
     }
+
+    const adicionaisDoItem = item.adicionalIds.map((adicionalId) => {
+      const adicional = adicionalPorId.get(adicionalId);
+      if (!adicional) {
+        throw new AppError(400, `Adicional ${adicionalId} não existe.`);
+      }
+      if (!adicional.ativo) {
+        throw new AppError(
+          409,
+          `O adicional "${adicional.nome}" está fora do cardápio.`,
+        );
+      }
+      if (
+        !adicional.categorias.some((c) => categoriasDoItem.has(c.categoriaId))
+      ) {
+        throw new AppError(
+          409,
+          `O adicional "${adicional.nome}" não é oferecido para "${vendavel.nome}".`,
+        );
+      }
+      return adicional;
+    });
 
     return {
       itemVendavelId: vendavel.id,
@@ -312,19 +360,16 @@ async function precificarItens(
       quantidade: item.quantidade,
       precoUnitarioPraticado: preco,
       observacao: item.observacao ?? null,
-      adicionais: item.adicionalIds.map((adicionalId) => {
-        const adicional = adicionalPorId.get(adicionalId);
-        if (!adicional) {
-          throw new AppError(400, `Adicional ${adicionalId} não existe.`);
-        }
-        if (!adicional.ativo) {
-          throw new AppError(
-            409,
-            `O adicional "${adicional.nome}" está fora do cardápio.`,
-          );
-        }
-        return { adicionalId, precoPraticado: adicional.preco };
-      }),
+      adicionais: adicionaisDoItem.map((a) => ({
+        adicionalId: a.id,
+        precoPraticado: a.preco,
+      })),
+      exibicao: {
+        nome: vendavel.nome,
+        tipo: vendavel.tipo,
+        variacao: variacaoEscolhida,
+        adicionais: adicionaisDoItem.map((a) => a.nome),
+      },
     };
   });
 }
@@ -449,96 +494,111 @@ async function exigirFormasDePagamento(tx: Tx, ids: number[]) {
   }
 }
 
+// Tudo o que o pedido precisa antes de ser gravado: valida as regras e
+// calcula os preços. É usado tanto para registrar (criar) quanto para
+// pré-visualizar (simular) — assim a tela de fechamento mostra exatamente o
+// total e os erros que o registro de verdade daria.
+//
 // `usuario` é quem está logado. Se o corpo não disser quem atendeu, o
 // atendente é o próprio usuário — o caso normal no balcão. Informar outro
 // atendenteId serve, por exemplo, para o gerente lançar um pedido anotado por
 // um colega.
+async function prepararPedido(
+  tx: Tx,
+  dados: CriarPedidoDTO,
+  usuario: UsuarioAutenticado,
+) {
+  const hoje = hojeComoData();
+
+  const atendenteId = dados.atendenteId ?? usuario.id;
+  await exigirFuncionarioComCargo(tx, atendenteId, CARGO.ATENDENTE, hoje);
+
+  const cliente =
+    dados.clienteId != null
+      ? await tx.cliente.findUnique({ where: { id: dados.clienteId } })
+      : null;
+  if (dados.clienteId != null && !cliente) {
+    throw new AppError(400, `Cliente ${dados.clienteId} não existe.`);
+  }
+
+  if (dados.mesaId != null) {
+    const mesa = await tx.mesa.findUnique({ where: { id: dados.mesaId } });
+    if (!mesa) {
+      throw new AppError(400, `Mesa ${dados.mesaId} não existe.`);
+    }
+    if (!mesa.ativa) {
+      throw new AppError(409, `A mesa ${mesa.numero} está inativa.`);
+    }
+  }
+
+  const itens = await precificarItens(tx, dados.itens, hoje);
+  const subtotalItens = itens.reduce(
+    (soma, item) => soma.plus(subtotalPrecificado(item)),
+    ZERO,
+  );
+
+  // O validator já garante cliente quando há cupom ou entrega; a checagem
+  // aqui existe para o TypeScript e como segunda barreira.
+  const cupom =
+    dados.cupomCodigo && cliente
+      ? await validarCupom(tx, dados.cupomCodigo, cliente.id, hoje)
+      : null;
+
+  let entrega = null;
+  if (dados.entrega && cliente) {
+    // O entregador pode ser definido depois (PATCH /pedidos/:id/entrega):
+    // na hora do pedido nem sempre se sabe quem estará livre.
+    const entregadorId = dados.entrega.entregadorId ?? null;
+    if (entregadorId !== null) {
+      await exigirFuncionarioComCargo(tx, entregadorId, CARGO.ENTREGADOR, hoje);
+    }
+    entrega = {
+      entregadorId,
+      taxaEntrega: new Prisma.Decimal(dados.entrega.taxaEntrega),
+      ...resolverEndereco(dados.entrega, cliente),
+    };
+  }
+
+  const descontoCupom = cupom ? calcularDesconto(subtotalItens, cupom) : ZERO;
+  const taxaEntrega = entrega?.taxaEntrega ?? ZERO;
+  const total = subtotalItens.minus(descontoCupom).plus(taxaEntrega);
+  const totalPago = dados.pagamentos.reduce(
+    (soma, p) => soma.plus(p.valorPago),
+    ZERO,
+  );
+
+  // Pagamento é opcional no registro: pode ser lançado depois
+  // (POST /pedidos/:id/pagamentos), por exemplo na mesa, ao fim da refeição.
+  if (dados.pagamentos.length > 0) {
+    await exigirFormasDePagamento(
+      tx,
+      dados.pagamentos.map((p) => p.formaPagamentoId),
+    );
+    if (totalPago.greaterThan(total)) {
+      throw new AppError(
+        409,
+        `A soma dos pagamentos (R$ ${moeda(totalPago)}) passa do total do pedido (R$ ${moeda(total)}).`,
+      );
+    }
+  }
+
+  return {
+    atendenteId,
+    cliente,
+    itens,
+    cupom,
+    entrega,
+    totais: { subtotalItens, descontoCupom, taxaEntrega, total, totalPago },
+  };
+}
+
 export async function criar(
   dados: CriarPedidoDTO,
   usuario: UsuarioAutenticado,
 ) {
   const pedido = await prisma.$transaction(async (tx) => {
-    const hoje = hojeComoData();
-
-    const atendenteId = dados.atendenteId ?? usuario.id;
-    await exigirFuncionarioComCargo(tx, atendenteId, CARGO.ATENDENTE, hoje);
-
-    const cliente =
-      dados.clienteId != null
-        ? await tx.cliente.findUnique({ where: { id: dados.clienteId } })
-        : null;
-    if (dados.clienteId != null && !cliente) {
-      throw new AppError(400, `Cliente ${dados.clienteId} não existe.`);
-    }
-
-    if (dados.mesaId != null) {
-      const mesa = await tx.mesa.findUnique({ where: { id: dados.mesaId } });
-      if (!mesa) {
-        throw new AppError(400, `Mesa ${dados.mesaId} não existe.`);
-      }
-      if (!mesa.ativa) {
-        throw new AppError(409, `A mesa ${mesa.numero} está inativa.`);
-      }
-    }
-
-    const itens = await precificarItens(tx, dados.itens, hoje);
-    const subtotalItens = itens.reduce(
-      (soma, item) =>
-        soma.plus(
-          item.adicionais
-            .reduce((s, a) => s.plus(a.precoPraticado), ZERO)
-            .plus(item.precoUnitarioPraticado)
-            .mul(item.quantidade),
-        ),
-      ZERO,
-    );
-
-    // O validator já garante cliente quando há cupom ou entrega; a checagem
-    // aqui existe para o TypeScript e como segunda barreira.
-    const cupom =
-      dados.cupomCodigo && cliente
-        ? await validarCupom(tx, dados.cupomCodigo, cliente.id, hoje)
-        : null;
-
-    let entrega = null;
-    if (dados.entrega && cliente) {
-      // O entregador pode ser definido depois (PATCH /pedidos/:id/entrega):
-      // na hora do pedido nem sempre se sabe quem estará livre.
-      const entregadorId = dados.entrega.entregadorId ?? null;
-      if (entregadorId !== null) {
-        await exigirFuncionarioComCargo(
-          tx,
-          entregadorId,
-          CARGO.ENTREGADOR,
-          hoje,
-        );
-      }
-      entrega = {
-        entregadorId,
-        taxaEntrega: dados.entrega.taxaEntrega,
-        ...resolverEndereco(dados.entrega, cliente),
-      };
-    }
-
-    if (dados.pagamentos.length > 0) {
-      await exigirFormasDePagamento(
-        tx,
-        dados.pagamentos.map((p) => p.formaPagamentoId),
-      );
-      const total = subtotalItens
-        .minus(cupom ? calcularDesconto(subtotalItens, cupom) : ZERO)
-        .plus(entrega?.taxaEntrega ?? 0);
-      const totalPago = dados.pagamentos.reduce(
-        (soma, p) => soma.plus(p.valorPago),
-        ZERO,
-      );
-      if (totalPago.greaterThan(total)) {
-        throw new AppError(
-          409,
-          `A soma dos pagamentos (R$ ${moeda(totalPago)}) passa do total do pedido (R$ ${moeda(total)}).`,
-        );
-      }
-    }
+    const { atendenteId, cliente, itens, cupom, entrega } =
+      await prepararPedido(tx, dados, usuario);
 
     // Um único create aninhado: pedido, itens, adicionais, entrega e
     // pagamentos nascem juntos ou nada é gravado. O status inicial
@@ -554,7 +614,7 @@ export async function criar(
         cupomId: cupom?.id ?? null,
         observacoes: dados.observacoes ?? null,
         itens: {
-          create: itens.map(({ adicionais, ...item }) => ({
+          create: itens.map(({ adicionais, exibicao: _, ...item }) => ({
             ...item,
             adicionais: { create: adicionais },
           })),
@@ -572,6 +632,58 @@ export async function criar(
   return formatar(pedido);
 }
 
+/**
+ * POST /pedidos/simulacao — recebe o mesmo corpo do registro e devolve itens
+ * precificados e totais, SEM gravar nada. Aplica as mesmas regras (promoção
+ * vigente, cupom, adicionais permitidos, itens fora do cardápio...), então
+ * o erro que o registro daria aparece já na tela de fechamento.
+ */
+export async function simular(
+  dados: CriarPedidoDTO,
+  usuario: UsuarioAutenticado,
+) {
+  // Só leituras, mas numa transação para enxergar um retrato único do banco.
+  const { cupom, entrega, itens, totais } = await prisma.$transaction((tx) =>
+    prepararPedido(tx, dados, usuario),
+  );
+  return {
+    tipoAtendimento: entrega
+      ? "ENTREGA"
+      : dados.mesaId != null
+        ? "CONSUMO_LOCAL"
+        : "RETIRADA",
+    itens: itens.map((item) => ({
+      itemVendavelId: item.itemVendavelId,
+      nome: item.exibicao.nome,
+      tipo: item.exibicao.tipo,
+      variacao: item.exibicao.variacao,
+      quantidade: item.quantidade,
+      precoUnitarioPraticado: moeda(item.precoUnitarioPraticado),
+      observacao: item.observacao,
+      adicionais: item.adicionais.map((a, i) => ({
+        adicionalId: a.adicionalId,
+        nome: item.exibicao.adicionais[i],
+        precoPraticado: moeda(a.precoPraticado),
+      })),
+      subtotal: moeda(subtotalPrecificado(item)),
+    })),
+    cupom: cupom && {
+      id: cupom.id,
+      codigo: cupom.codigo,
+      tipoDesconto: cupom.tipoDesconto,
+      valorDesconto: moeda(cupom.valorDesconto),
+    },
+    totais: {
+      subtotalItens: moeda(totais.subtotalItens),
+      descontoCupom: moeda(totais.descontoCupom),
+      taxaEntrega: moeda(totais.taxaEntrega),
+      total: moeda(totais.total),
+      totalPago: moeda(totais.totalPago),
+      saldo: moeda(totais.total.minus(totais.totalPago)),
+    },
+  };
+}
+
 // -----------------------------------------------------------------------------
 // Consulta
 // -----------------------------------------------------------------------------
@@ -584,7 +696,19 @@ export async function buscarPorId(id: number) {
 // um `where` comum, atendido pelo índice (status_atual, data_hora) — antes
 // era preciso uma subconsulta no histórico para cada pedido.
 export async function listar(filtros: ListarPedidosQuery) {
-  const { status, clienteId, dataInicio, dataFim, ...pagina } = filtros;
+  const {
+    status,
+    clienteId,
+    mesaId,
+    atendenteId,
+    entregadorId,
+    tipoAtendimento,
+    busca,
+    dataInicio,
+    dataFim,
+    ordem,
+    ...pagina
+  } = filtros;
 
   // O período é informado em DIAS no fuso do negócio; data_hora é um
   // instante (TIMESTAMPTZ). inicioDoDia faz a conversão.
@@ -592,17 +716,47 @@ export async function listar(filtros: ListarPedidosQuery) {
   if (dataInicio) periodo.gte = inicioDoDia(dataInicio);
   if (dataFim) periodo.lt = inicioDoDia(somarDias(dataFim, 1));
 
-  const where: Prisma.PedidoWhereInput = {
-    ...(status === undefined ? {} : { statusAtual: status }),
-    ...(clienteId === undefined ? {} : { clienteId }),
-    ...(dataInicio || dataFim ? { dataHora: periodo } : {}),
+  // O tipo de atendimento não é coluna: é derivado de ter entrega ou mesa.
+  const porTipo: Record<
+    (typeof TIPOS_ATENDIMENTO)[number],
+    Prisma.PedidoWhereInput
+  > = {
+    ENTREGA: { entrega: { isNot: null } },
+    CONSUMO_LOCAL: { entrega: { is: null }, mesaId: { not: null } },
+    RETIRADA: { entrega: { is: null }, mesaId: null },
   };
+
+  const condicoes: Prisma.PedidoWhereInput[] = [];
+  if (status) condicoes.push({ statusAtual: { in: status } });
+  if (clienteId !== undefined) condicoes.push({ clienteId });
+  if (mesaId !== undefined) condicoes.push({ mesaId });
+  if (atendenteId !== undefined) condicoes.push({ atendenteId });
+  if (entregadorId !== undefined) condicoes.push({ entrega: { entregadorId } });
+  if (tipoAtendimento) condicoes.push(porTipo[tipoAtendimento]);
+  if (dataInicio || dataFim) condicoes.push({ dataHora: periodo });
+  if (busca) {
+    // "#123" ou "123" acha o pedido pelo número; texto, pelo cliente.
+    const numero = /^#?(\d{1,9})$/.exec(busca);
+    const porCliente: Prisma.PedidoWhereInput = {
+      cliente: {
+        OR: [
+          { nome: { contains: busca, mode: "insensitive" } },
+          { telefone: { contains: busca } },
+        ],
+      },
+    };
+    condicoes.push(
+      numero ? { OR: [{ id: Number(numero[1]) }, porCliente] } : porCliente,
+    );
+  }
+  const where: Prisma.PedidoWhereInput = { AND: condicoes };
+  const sentido = ordem === "antigos" ? "asc" : "desc";
 
   const [pedidos, total] = await prisma.$transaction([
     prisma.pedido.findMany({
       where,
       include: inclusaoCompleta,
-      orderBy: [{ dataHora: "desc" }, { id: "desc" }],
+      orderBy: [{ dataHora: sentido }, { id: sentido }],
       ...recorte(pagina),
     }),
     prisma.pedido.count({ where }),
@@ -812,4 +966,56 @@ export async function avaliar(id: number, dados: AvaliarPedidoDTO) {
   });
 
   return formatar(pedido);
+}
+
+// -----------------------------------------------------------------------------
+// Mesas ocupadas
+// -----------------------------------------------------------------------------
+
+/**
+ * Pedido em aberto de cada mesa, hoje: o mais recente que não foi cancelado
+ * e que ainda não terminou — ou terminou (comida servida) mas tem saldo a
+ * pagar. A mesa só fica livre quando a conta fecha.
+ */
+export async function abertosPorMesa(mesaIds: number[]) {
+  if (mesaIds.length === 0) return new Map<number, AbertoNaMesa>();
+  const pedidos = await prisma.pedido.findMany({
+    where: {
+      mesaId: { in: mesaIds },
+      statusAtual: { not: "CANCELADO" },
+      dataHora: { gte: inicioDoDia(hojeComoData()) },
+    },
+    include: inclusaoCompleta,
+    orderBy: [{ dataHora: "desc" }, { id: "desc" }],
+  });
+  const porMesa = new Map<number, AbertoNaMesa>();
+  for (const pedido of pedidos) {
+    if (pedido.mesaId === null || porMesa.has(pedido.mesaId)) continue;
+    const { total, saldo } = calcularTotais(pedido);
+    if (
+      pedido.statusAtual === "ENTREGUE_RETIRADO" &&
+      saldo.lessThanOrEqualTo(0)
+    )
+      continue;
+    porMesa.set(pedido.mesaId, {
+      id: pedido.id,
+      dataHora: pedido.dataHora,
+      statusAtual: statusAtual(pedido),
+      cliente: pedido.cliente,
+      totalItens: pedido.itens.reduce((n, i) => n + i.quantidade, 0),
+      total: moeda(total),
+      saldo: moeda(saldo),
+    });
+  }
+  return porMesa;
+}
+
+export interface AbertoNaMesa {
+  id: number;
+  dataHora: Date;
+  statusAtual: StatusPedido;
+  cliente: { id: number; nome: string; telefone: string } | null;
+  totalItens: number;
+  total: string;
+  saldo: string;
 }
