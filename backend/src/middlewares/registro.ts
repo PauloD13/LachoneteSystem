@@ -19,6 +19,9 @@ export function registrarRequisicao(
     // Só o caminho: a query string e o corpo ficam fora do log.
     const rota = req.originalUrl.split("?")[0];
     if (rota === "/api/health" && res.statusCode === 200) return;
+    // Arquivos das telas (HTML, JS, CSS) entregues com sucesso não interessam
+    // no log: só a API e os erros.
+    if (!rota?.startsWith("/api") && res.statusCode < 400) return;
 
     const ms = Number(process.hrtime.bigint() - inicio) / 1e6;
     logger.info("requisição", {

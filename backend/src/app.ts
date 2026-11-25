@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import { environment } from "./config/env.js";
 import routes from "./routes/index.js";
+import { pastaDoFrontend, servirFrontend } from "./middlewares/frontend.js";
 import { errorHandler, rotaNaoEncontrada } from "./middlewares/errorHandler.js";
 import { registrarRequisicao } from "./middlewares/registro.js";
 import {
@@ -30,6 +31,10 @@ app.use(express.json({ limit: "100kb" }));
 // a tela /clientes e a rota GET /clientes da API colidiriam — dar F5 na tela
 // devolveria o JSON da API em vez da página.
 app.use("/api", routes);
+
+//SECTION - telas do frontend (quando compiladas; ver middlewares/frontend.ts)
+const frontend = pastaDoFrontend();
+if (frontend) app.use(servirFrontend(frontend));
 
 app.use(rotaNaoEncontrada);
 app.use(errorHandler);

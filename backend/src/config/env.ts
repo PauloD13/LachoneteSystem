@@ -21,10 +21,16 @@ const enviromentSchema = z
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
+    // Origens (outros sites) autorizadas a chamar a API pelo navegador.
+    // Opcional: as telas do sistema são servidas pelo próprio backend (e,
+    // em desenvolvimento, pelo proxy do Vite), ou seja, da MESMA origem da
+    // API, e não precisam de CORS. Sem a variável, nenhuma outra origem é
+    // autorizada (false). "*" libera todas; várias separadas por vírgula.
     CORS_ORIGIN: z
-      .string("CORS_ORIGIN é obrigatório")
-      .min(1, "CORS_ORIGIN não pode estar vazio")
-      .transform((val) => {
+      .string()
+      .optional()
+      .transform((val): string | string[] | false => {
+        if (!val) return false;
         // Se for apenas o caractere coringa '*', retorna como string única
         if (val === "*") return val;
 
@@ -93,6 +99,12 @@ const enviromentSchema = z
     LIMITE_REQUISICOES_POR_MINUTO: inteiro(600),
     // Tentativas de login ERRADAS por IP + login, a cada 15 minutos.
     LIMITE_TENTATIVAS_LOGIN: inteiro(10),
+
+    // --- Frontend ------------------------------------------------------------
+    // Pasta com as telas compiladas (`npm run build` do frontend). Se a pasta
+    // existir, o backend as serve no mesmo endereço da API. Padrão: a pasta
+    // `public/` ao lado de `dist/` — onde o Dockerfile as coloca.
+    FRONTEND_DIR: z.string().optional(),
   })
   .superRefine((env, ctx) => {
     const temPartes =

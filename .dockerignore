@@ -1,0 +1,32 @@
+# O que NÃO vai para o contexto de build do Docker (a raiz do repositório).
+# Menos arquivos = build mais rápido, e nada sensível dentro da imagem.
+
+# Controle de versão e editores
+.git
+.github
+.vscode
+.idea
+**/*.swp
+**/.DS_Store
+
+# Dependências e builds locais (o Dockerfile instala e compila do zero)
+**/node_modules
+**/dist
+
+# Segredos e configuração local — nunca dentro de uma imagem
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.key
+
+# Logs
+**/*.log
+
+# O que a imagem não usa
+docs
+database
+scripts
+backend/tests
+**/*.md
+docker-compose.yml
