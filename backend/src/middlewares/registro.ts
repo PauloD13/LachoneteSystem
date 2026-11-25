@@ -18,7 +18,7 @@ export function registrarRequisicao(
   res.on("finish", () => {
     // Só o caminho: a query string e o corpo ficam fora do log.
     const rota = req.originalUrl.split("?")[0];
-    if (rota === "/health" && res.statusCode === 200) return;
+    if (rota === "/api/health" && res.statusCode === 200) return;
 
     const ms = Number(process.hrtime.bigint() - inicio) / 1e6;
     logger.info("requisição", {

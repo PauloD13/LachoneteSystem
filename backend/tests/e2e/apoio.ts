@@ -5,7 +5,7 @@
 // validação, regras de negócio, Prisma, triggers e constraints do Postgres.
 //
 // Pré-requisitos (ver README, seção "Testes automatizados"):
-//   - API no ar (API_URL, padrão http://localhost:3000);
+//   - API no ar (API_URL, padrão http://localhost:3000/api);
 //   - banco criado pelos scripts de database/init (schema + seed);
 //   - gerente inicial (ADMIN_LOGIN / ADMIN_SENHA, os mesmos da API).
 //
@@ -14,7 +14,7 @@
 
 import assert from "node:assert/strict";
 
-const API_URL = process.env.API_URL ?? "http://localhost:3000";
+const API_URL = process.env.API_URL ?? "http://localhost:3000/api";
 const ADMIN_LOGIN = process.env.ADMIN_LOGIN ?? "admin";
 const ADMIN_SENHA = process.env.ADMIN_SENHA ?? "admin12345";
 const FUSO = process.env.APP_TIMEZONE ?? "America/Sao_Paulo";

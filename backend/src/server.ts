@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { environment } from "./config/env.js";
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
@@ -20,9 +21,17 @@ async function prepararAcessoInicial(): Promise<void> {
   try {
     await garantirAdministradorInicial();
   } catch (erro) {
-    logger.error("falha ao verificar o gerente inicial; nova tentativa em 5s", {
-      erro,
-    });
+    // Banco fora do ar é o caso comum (ex.: o backend subiu antes do
+    // Postgres): basta uma linha de aviso, sem a pilha inteira a cada 5s.
+    if (erro instanceof Prisma.PrismaClientInitializationError) {
+      logger.warn(
+        "banco de dados inacessível; nova tentativa em 5s (o Postgres está rodando? confira DATABASE_URL)",
+      );
+    } else {
+      logger.error("falha ao verificar o gerente inicial; nova tentativa em 5s", {
+        erro,
+      });
+    }
     setTimeout(prepararAcessoInicial, 5000).unref();
   }
 }

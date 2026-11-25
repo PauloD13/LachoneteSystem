@@ -50,7 +50,7 @@ export const limiteGlobal: RequestHandler =
         standardHeaders: "draft-8",
         legacyHeaders: false,
         // O healthcheck do Docker bate aqui a cada poucos segundos.
-        skip: (req) => req.path === "/health",
+        skip: (req) => req.path === "/api/health",
         handler: responder429(
           "Muitas requisições em pouco tempo. Aguarde um instante e tente de novo.",
         ),

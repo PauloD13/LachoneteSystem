@@ -128,12 +128,46 @@ banco via `database/init/`. `docker compose ps` mostra o backend como
 
 ## Execução local do backend (sem Docker)
 
+Útil no desenvolvimento: o backend roda na sua máquina com `npm run dev`
+(recarrega a cada alteração) e só o banco fica num container.
+
+**1. Suba um PostgreSQL** com o schema e os dados iniciais. O banco do
+`docker-compose.yml` não serve para isso: de propósito, a porta dele não é
+publicada (só o backend do compose o acessa, pela rede interna). Na **raiz**
+do projeto:
+
+```bash
+# Linux / macOS / Git Bash
+docker run -d --name lachonete-db -p 5432:5432 \
+  -e POSTGRES_USER=lachonete -e POSTGRES_PASSWORD=lachonete -e POSTGRES_DB=lachonete \
+  -v "$(pwd)/database/init:/docker-entrypoint-initdb.d:ro" postgres:16-alpine
+```
+
+```bat
+:: Windows (Prompt de Comando)
+docker run -d --name lachonete-db -p 5432:5432 -e POSTGRES_USER=lachonete -e POSTGRES_PASSWORD=lachonete -e POSTGRES_DB=lachonete -v "%cd%\database\init:/docker-entrypoint-initdb.d:ro" postgres:16-alpine
+```
+
+As credenciais (`lachonete`/`lachonete`) são as mesmas do
+`backend/.env.example`. Nos dias seguintes basta `docker start lachonete-db`.
+Para recomeçar do zero (por exemplo, depois de uma mudança em
+`database/init/`): `docker rm -f -v lachonete-db` e o `docker run` de novo.
+
+> Se a porta 5432 já estiver ocupada (um PostgreSQL instalado na máquina),
+> troque para `-p 5433:5432` e use `localhost:5433` na `DATABASE_URL`.
+
+**2. Rode o backend:**
+
 ```bash
 cd backend
-cp .env.example .env
+cp .env.example .env      # Windows: copy .env.example .env
 npm install
 npm run dev
 ```
+
+O `.env.example` já vem pronto para esse banco. Na primeira subida o backend
+cria o gerente inicial (`admin` / `admin12345`). Confira em
+`http://localhost:3000/api/health`.
 
 Scripts disponíveis no backend:
 
@@ -164,9 +198,9 @@ cd backend
 npm run test:e2e
 ```
 
-Por padrão os testes usam `http://localhost:3000` e o gerente
+Por padrão os testes usam `http://localhost:3000/api` e o gerente
 `admin` / `admin12345` (os valores de `backend/.env.example`). Para outro
-ambiente: `API_URL=http://localhost:8080 ADMIN_LOGIN=... ADMIN_SENHA=... npm run test:e2e`.
+ambiente: `API_URL=http://localhost:8080/api ADMIN_LOGIN=... ADMIN_SENHA=... npm run test:e2e`.
 Cada teste cria os próprios dados, então a suíte pode rodar várias vezes no
 mesmo banco — mas ela faz ~500 requisições: para repetir em seguida, use
 `LIMITE_REQUISICOES_POR_MINUTO=0` na API.
@@ -182,18 +216,20 @@ mesmo banco — mas ela faz ~500 requisições: para repetir em seguida, use
 
 ## Autenticação e permissões
 
-Toda a API exige login, exceto `GET /health` e `POST /auth/login`.
+Todas as rotas da API começam com **`/api`** (o restante dos endereços fica
+para as telas do frontend). Toda a API exige login, exceto `GET /api/health`
+e `POST /api/auth/login`.
 
 ```bash
 # 1. Entrar
-curl -X POST http://localhost:3000/auth/login \
+curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"login": "admin", "senha": "admin12345"}'
 # -> { "token": "eyJ...", "tipo": "Bearer", "expiraEm": "...",
 #      "funcionario": { "id": 1, "nome": "Administrador", "cargos": ["gerente"] } }
 
 # 2. Enviar o token em todas as outras chamadas
-curl http://localhost:3000/produtos -H "Authorization: Bearer eyJ..."
+curl http://localhost:3000/api/produtos -H "Authorization: Bearer eyJ..."
 ```
 
 - **Quem tem acesso:** funcionários com `login` e `senha` cadastrados (o
@@ -215,8 +251,9 @@ Respostas de erro de acesso: `401` (sem login, token inválido ou expirado),
 
 ## Endpoints do backend
 
-Salvo indicação, cada recurso tem o CRUD padrão: `POST /`, `GET /`,
-`GET /:id`, `PATCH /:id`, `DELETE /:id`.
+Todos os caminhos abaixo ficam sob `/api` (ex.: `/clientes` →
+`http://localhost:3000/api/clientes`). Salvo indicação, cada recurso tem o
+CRUD padrão: `POST /`, `GET /`, `GET /:id`, `PATCH /:id`, `DELETE /:id`.
 
 **Listagens são paginadas** (`?pagina=1&tamanhoPagina=20`, máximo de 100 por
 página) e respondem sempre no mesmo formato:
@@ -230,7 +267,7 @@ pequenas por natureza e voltam como lista simples.
 
 | Área | Recurso | Observações |
 | --- | --- | --- |
-| — | `GET /health` | Público. `200` se a API e o banco respondem; `503` se o banco está fora |
+| — | `GET /api/health` | Público. `200` se a API e o banco respondem; `503` se o banco está fora |
 | Acesso | `/auth` | `POST /login`, `GET /me` (quem sou eu e meus cargos), `PATCH /senha` (trocar a própria senha) |
 | Cadastros | `/clientes` | `?busca=` (nome, telefone ou e-mail); `GET /clientes/:id/pedidos` — histórico de pedidos do cliente |
 | Cadastros | `/funcionarios` | Filtros `?ativo=` e `?cargo=entregador`; aceita `login`/`senha` (`login: null` remove o acesso). Sub-rota `/funcionarios/:funcionarioId/cargos`: `POST` abre vínculo, `GET` histórico, `PATCH /:vinculoId` encerra |
@@ -247,7 +284,7 @@ pequenas por natureza e voltam como lista simples.
 ### Exemplo: registrar um pedido
 
 ```json
-POST /pedidos
+POST /api/pedidos
 {
   "canal": "APP",
   "clienteId": 1,
@@ -267,7 +304,7 @@ POST /pedidos
 
 O atendente é o funcionário logado (ou `atendenteId`, para lançar em nome de
 outro atendente). O entregador pode vir já em `entrega.entregadorId` ou ser
-definido depois, com `PATCH /pedidos/:id/entrega`.
+definido depois, com `PATCH /api/pedidos/:id/entrega`.
 
 A resposta traz o pedido montado, com `statusAtual`, `statusHistorico` e o
 bloco `totais` (`subtotalItens`, `descontoCupom`, `taxaEntrega`, `total`,
