@@ -7,7 +7,11 @@
 #   (foi o caso do Prisma 7 no início do projeto). Se o CI ficar vermelho,
 #   a atualização precisa de uma migração planejada antes de ser mesclada;
 # - imagens Docker ficam de fora: trocar a versão major do Postgres exige
-#   migrar os dados do volume, não é um "mesclar e pronto".
+#   migrar os dados do volume, não é um "mesclar e pronto";
+# - TypeScript 6.1 ou mais novo fica de fora por enquanto: o typescript-eslint
+#   (lint dos dois projetos) só aceita TypeScript < 6.1, e a tentativa de
+#   atualizar fazia o job do Dependabot falhar toda semana. Quando o
+#   typescript-eslint passar a aceitar versões novas, apague os "ignore".
 version: 2
 updates:
   - package-ecosystem: npm
@@ -17,6 +21,9 @@ updates:
     groups:
       backend:
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: typescript
+        versions: [">= 6.1.0"]
 
   - package-ecosystem: npm
     directory: /frontend
@@ -25,6 +32,9 @@ updates:
     groups:
       frontend:
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: typescript
+        versions: [">= 6.1.0"]
 
   # As próprias actions do CI (actions/checkout, actions/setup-node).
   - package-ecosystem: github-actions
