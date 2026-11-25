@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useConsulta } from "../../hooks/useConsulta";
+import { useSelecaoNaLista } from "../../hooks/useSelecaoNaLista";
 import { useAcao } from "../../hooks/useAcao";
 import {
   cargos,
@@ -22,19 +23,17 @@ import type { Funcionario, FuncionarioEntrada } from "../../types/dominio";
  */
 export function EquipePage() {
   const [soAtivos, setSoAtivos] = useState(true);
-  const [selecionado, setSelecionado] = useState<number | "novo" | null>(null);
+  const [novo, setNovo] = useState(false);
   const lista = useConsulta(`equipe:${soAtivos}`, (s) =>
     funcionarios.listar(
       { ativo: soAtivos ? true : undefined, tamanhoPagina: 100 },
       s,
     ),
   );
-  const atual =
-    selecionado === "novo"
-      ? null
-      : (lista.dados?.dados.find((f) => f.id === selecionado) ??
-        lista.dados?.dados[0] ??
-        null);
+  const { atual, selecionar, aposSalvar } = useSelecaoNaLista(
+    lista.dados?.dados,
+    lista.carregando,
+  );
 
   return (
     <>
@@ -48,7 +47,7 @@ export function EquipePage() {
             Quem trabalha, com que cargo e quem entra no sistema
           </span>
         </div>
-        <Botao variante="primario" onClick={() => setSelecionado("novo")}>
+        <Botao variante="primario" onClick={() => setNovo(true)}>
           <Icone nome="mais" />
           Novo funcionário
         </Botao>
@@ -82,8 +81,11 @@ export function EquipePage() {
                 key={f.id}
                 type="button"
                 className="ui-item-lista"
-                aria-current={atual?.id === f.id && selecionado !== "novo"}
-                onClick={() => setSelecionado(f.id)}
+                aria-current={atual?.id === f.id && !novo}
+                onClick={() => {
+                  setNovo(false);
+                  selecionar(f.id);
+                }}
               >
                 <span
                   className="ui-avatar"
@@ -114,12 +116,13 @@ export function EquipePage() {
             ))
           )}
         </section>
-        {(selecionado === "novo" || atual) && (
+        {(novo || atual) && (
           <EditorFuncionario
-            key={selecionado === "novo" ? "novo" : atual!.id}
-            funcionario={selecionado === "novo" ? null : atual}
+            key={novo ? "novo" : atual!.id}
+            funcionario={novo ? null : atual}
             aoSalvar={(f) => {
-              setSelecionado(f.id);
+              setNovo(false);
+              aposSalvar(f);
               lista.recarregar();
             }}
           />

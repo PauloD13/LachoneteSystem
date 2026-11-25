@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useConsulta } from "../../../hooks/useConsulta";
 import { useAcao } from "../../../hooks/useAcao";
+import { useSelecaoNaLista } from "../../../hooks/useSelecaoNaLista";
 import {
   categorias,
   fichaTecnica,
@@ -36,7 +37,6 @@ export function ProdutosAba({
   aoAbrirNovo(v: boolean): void;
 }) {
   const [categoriaId, setCategoriaId] = useState<number | null>(null);
-  const [selecionado, setSelecionado] = useState<number | null>(null);
   const cats = useConsulta("cardapio:categorias", (s) =>
     categorias.listar({ tamanhoPagina: 100 }, s),
   );
@@ -46,11 +46,8 @@ export function ProdutosAba({
       s,
     ),
   );
-  const atual = novo
-    ? null
-    : (lista.dados?.dados.find((p) => p.id === selecionado) ??
-      lista.dados?.dados[0] ??
-      null);
+  const selecao = useSelecaoNaLista(lista.dados?.dados, lista.carregando);
+  const atual = novo ? null : selecao.atual;
 
   return (
     <div className="ui-paineis">
@@ -97,7 +94,7 @@ export function ProdutosAba({
               aria-current={atual?.id === p.id}
               onClick={() => {
                 aoAbrirNovo(false);
-                setSelecionado(p.id);
+                selecao.selecionar(p.id);
               }}
             >
               <span
@@ -134,7 +131,7 @@ export function ProdutosAba({
           categorias={cats.dados?.dados ?? []}
           aoSalvar={(p) => {
             aoAbrirNovo(false);
-            setSelecionado(p.id);
+            selecao.aposSalvar(p);
             lista.recarregar();
           }}
         />
