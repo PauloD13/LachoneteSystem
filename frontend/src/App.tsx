@@ -1,13 +1,7 @@
+import { AppRoutes } from "./routes/AppRoutes";
 
 function App() {
-
-  return (
-    <>
-      <section id="center">
-        Lanchonete Sabor & Cia
-      </section>
-    </>
-  )
+  return <AppRoutes />;
 }
 
-export default App
+export default App;

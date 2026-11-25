@@ -1,0 +1,70 @@
+/*
+ * Base: um "reset" leve (navegadores têm estilos padrão diferentes) e o
+ * visual padrão dos elementos HTML. Estilos de uma tela específica ficam
+ * no .module.css da própria tela, não aqui.
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--fonte-base);
+  font-size: var(--tamanho-base);
+  line-height: 1.5;
+  color: var(--cor-texto);
+  background: var(--cor-fundo);
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  padding: var(--espaco-2) var(--espaco-3);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  color: inherit;
+}
+
+button {
+  padding: var(--espaco-2) var(--espaco-4);
+  border: 1px solid transparent;
+  border-radius: var(--raio);
+  background: var(--cor-primaria);
+  color: var(--cor-primaria-texto);
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Foco sempre visível para quem navega pelo teclado. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--foco);
+}
+
+a {
+  color: var(--cor-primaria);
+}
+
+.carregando {
+  color: var(--cor-texto-suave);
+}

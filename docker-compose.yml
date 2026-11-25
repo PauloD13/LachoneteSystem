@@ -23,8 +23,11 @@ services:
       retries: 5
 
   backend:
+    # O Dockerfile do backend também compila o frontend, por isso o contexto
+    # de build é a raiz do repositório (ele precisa de backend/ e frontend/).
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     # Se o processo cair (ou o servidor da sala reiniciar), o Docker sobe de novo.
     restart: unless-stopped
     environment:
@@ -40,7 +43,9 @@ services:
       DB_NAME: ${POSTGRES_DB}
       PORT: ${BACKEND_PORT}
       NODE_ENV: production
-      CORS_ORIGIN: ${CORS_ORIGIN}
+      # Opcional: as telas vêm do próprio backend (mesmo endereço), então o
+      # CORS só é necessário se outro site precisar chamar a API.
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
       # Autenticação (obrigatórias — ver .env.example).
       JWT_SECRET: ${JWT_SECRET}
       ADMIN_LOGIN: ${ADMIN_LOGIN}

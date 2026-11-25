@@ -453,7 +453,10 @@ async function exigirFormasDePagamento(tx: Tx, ids: number[]) {
 // atendente é o próprio usuário — o caso normal no balcão. Informar outro
 // atendenteId serve, por exemplo, para o gerente lançar um pedido anotado por
 // um colega.
-export async function criar(dados: CriarPedidoDTO, usuario: UsuarioAutenticado) {
+export async function criar(
+  dados: CriarPedidoDTO,
+  usuario: UsuarioAutenticado,
+) {
   const pedido = await prisma.$transaction(async (tx) => {
     const hoje = hojeComoData();
 
@@ -503,7 +506,12 @@ export async function criar(dados: CriarPedidoDTO, usuario: UsuarioAutenticado) 
       // na hora do pedido nem sempre se sabe quem estará livre.
       const entregadorId = dados.entrega.entregadorId ?? null;
       if (entregadorId !== null) {
-        await exigirFuncionarioComCargo(tx, entregadorId, CARGO.ENTREGADOR, hoje);
+        await exigirFuncionarioComCargo(
+          tx,
+          entregadorId,
+          CARGO.ENTREGADOR,
+          hoje,
+        );
       }
       entrega = {
         entregadorId,
@@ -741,7 +749,10 @@ export async function adicionarPagamento(id: number, dados: PagamentoDTO) {
 
 // Define, troca ou retira (null) o entregador enquanto o pedido ainda não
 // saiu. É aqui que se preenche o entregador de uma entrega criada sem ele.
-export async function definirEntregador(id: number, entregadorId: number | null) {
+export async function definirEntregador(
+  id: number,
+  entregadorId: number | null,
+) {
   const pedido = await prisma.$transaction(async (tx) => {
     await travarPedido(tx, id);
     const atual = await carregar(tx, id);

@@ -1,0 +1,195 @@
+# Integração contínua: a cada push, o GitHub confere se o projeto continua
+# formatado, sem erros de lint, compilando e com os testes passando — e se o
+# docker compose sobe de verdade. O resultado aparece na aba "Actions" e ao
+# lado de cada commit/PR (✔ ou ✖).
+#
+# Para reproduzir uma falha na sua máquina, rode o mesmo comando do passo
+# que falhou (todos são scripts do package.json).
+
+name: CI
+
+on:
+  # Todo push, em qualquer branch: o erro aparece antes de virar PR.
+  push:
+  # Botão "Run workflow" na aba Actions, para rodar sob demanda.
+  workflow_dispatch:
+
+# Um push novo na mesma branch cancela a execução anterior, ainda em curso.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# O CI só lê o código; não pode alterar nada no repositório.
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend — lint, build e testes da API
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+
+    # Banco descartável só para os testes, criado a cada execução.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lachonete
+          POSTGRES_PASSWORD: lachonete
+          POSTGRES_DB: lachonete
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lachonete -d lachonete"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # Configuração de TESTE (não são segredos: o banco some ao fim do job).
+    env:
+      DATABASE_URL: postgresql://lachonete:lachonete@localhost:5432/lachonete?schema=public
+      JWT_SECRET: chave-apenas-para-o-ci-com-mais-de-32-caracteres
+      ADMIN_LOGIN: admin
+      ADMIN_SENHA: admin12345
+      LIMITE_REQUISICOES_POR_MINUTO: "0"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Formatação (Prettier) — para corrigir, rode `npm run format`
+        run: npm run format:check
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Compilar (confere os tipos)
+        run: npm run build
+
+      - name: Criar o banco com os scripts de database/init
+        working-directory: database/init
+        run: |
+          for arquivo in *.sql; do
+            echo "::group::$arquivo"
+            docker exec -i ${{ job.services.postgres.id }} \
+              psql -U lachonete -d lachonete -v ON_ERROR_STOP=1 -q < "$arquivo"
+            echo "::endgroup::"
+          done
+
+      - name: Subir a API
+        # NODE_ENV só aqui: definido no job inteiro, faria o `npm ci` pular
+        # as devDependencies (ESLint, TypeScript...).
+        env:
+          NODE_ENV: production
+        run: |
+          node dist/server.js > api.log 2>&1 &
+          for tentativa in $(seq 1 30); do
+            curl -fs http://localhost:3000/api/health && exit 0
+            sleep 1
+          done
+          echo "A API não respondeu em 30s"; cat api.log; exit 1
+
+      - name: Testes de ponta a ponta
+        run: npm run test:e2e
+
+      - name: Log da API (só quando algo falha)
+        if: failure()
+        run: cat api.log || true
+
+  frontend:
+    name: Frontend — lint, testes e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Formatação (Prettier) — para corrigir, rode `npm run format`
+        run: npm run format:check
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Testes unitários (Vitest)
+        run: npm test
+
+      - name: Compilar (confere os tipos e gera o build)
+        run: npm run build
+
+  docker:
+    name: Docker Compose — o sistema sobe e funciona
+    # Só roda se o código já passou nas conferências acima (economiza tempo).
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # O mesmo .env que se usaria na sala, com valores de teste. A senha do
+      # banco tem @ : / # de propósito: garante que continuam funcionando.
+      - name: Criar o .env de teste
+        run: |
+          cat > .env <<'FIM'
+          POSTGRES_USER=lachonete
+          POSTGRES_PASSWORD=S3nh@:dif/icil#ci
+          POSTGRES_DB=lachonete
+          HOST_BACKEND_PORT=8080
+          BACKEND_PORT=3000
+          JWT_SECRET=chave-apenas-para-o-ci-com-mais-de-32-caracteres
+          ADMIN_LOGIN=admin
+          ADMIN_SENHA=admin12345
+          LIMITE_REQUISICOES_POR_MINUTO=0
+          FIM
+
+      - name: docker compose up (build + espera ficar "healthy")
+        run: docker compose up --build --detach --wait --wait-timeout 180
+
+      - name: A tela inicial é servida pelo backend
+        run: |
+          curl -fs http://localhost:8080/ | grep -q '<div id="root">'
+          curl -fs http://localhost:8080/clientes | grep -q '<div id="root">'
+          echo "Frontend OK"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Testes de ponta a ponta contra o container
+        working-directory: backend
+        run: |
+          npm ci
+          API_URL=http://localhost:8080/api npm run test:e2e
+
+      - name: Logs dos containers (só quando algo falha)
+        if: failure()
+        run: docker compose logs
+
+      - name: Derrubar tudo
+        if: always()
+        run: docker compose down --volumes

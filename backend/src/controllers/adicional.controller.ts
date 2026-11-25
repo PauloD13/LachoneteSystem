@@ -1,6 +1,9 @@
 import type { Request, Response } from "express";
 import * as adicionalService from "../services/adicional.service.js";
-import { idParamSchema, listarComAtivoQuerySchema } from "../validators/comum.js";
+import {
+  idParamSchema,
+  listarComAtivoQuerySchema,
+} from "../validators/comum.js";
 import {
   criarAdicionalSchema,
   atualizarAdicionalSchema,

@@ -29,7 +29,13 @@ describe("disponibilidade e cabeçalhos", () => {
 
 describe("autenticação", () => {
   it("sem token, toda rota de negócio responde 401", async () => {
-    for (const rota of ["/produtos", "/pedidos", "/clientes", "/relatorios/mais-vendidos", "/rota-que-nao-existe"]) {
+    for (const rota of [
+      "/produtos",
+      "/pedidos",
+      "/clientes",
+      "/relatorios/mais-vendidos",
+      "/rota-que-nao-existe",
+    ]) {
       assert.equal((await api("GET", rota)).status, 401, rota);
     }
     assert.equal((await api("POST", "/pedidos", { corpo: {} })).status, 401);
@@ -37,14 +43,25 @@ describe("autenticação", () => {
 
   it("recusa token adulterado, token inventado e esquema errado", async () => {
     const valido = await gerente();
-    const adulterado = valido.slice(0, -3) + (valido.endsWith("aaa") ? "bbb" : "aaa");
-    assert.equal((await api("GET", "/auth/me", { token: adulterado })).status, 401);
-    assert.equal((await api("GET", "/auth/me", { token: "abc.def.ghi" })).status, 401);
+    const adulterado =
+      valido.slice(0, -3) + (valido.endsWith("aaa") ? "bbb" : "aaa");
+    assert.equal(
+      (await api("GET", "/auth/me", { token: adulterado })).status,
+      401,
+    );
+    assert.equal(
+      (await api("GET", "/auth/me", { token: "abc.def.ghi" })).status,
+      401,
+    );
 
     // Token "sem assinatura" (alg: none), truque clássico de falsificação.
-    const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64url");
+    const b64 = (o: object) =>
+      Buffer.from(JSON.stringify(o)).toString("base64url");
     const semAssinatura = `${b64({ alg: "none", typ: "JWT" })}.${b64({ sub: "1" })}.`;
-    assert.equal((await api("GET", "/auth/me", { token: semAssinatura })).status, 401);
+    assert.equal(
+      (await api("GET", "/auth/me", { token: semAssinatura })).status,
+      401,
+    );
   });
 
   it("login errado e login inexistente dão a MESMA resposta", async () => {
@@ -73,8 +90,13 @@ describe("autenticação", () => {
     const respostas = [
       await ok(200, "GET", `/funcionarios/${f.id}`, { token }),
       await ok(200, "GET", "/funcionarios?tamanhoPagina=100", { token }),
-      await ok(200, "PATCH", `/funcionarios/${f.id}`, { token, corpo: { telefone: "1133334444" } }),
-      await ok(200, "POST", "/auth/login", { corpo: { login: f.login, senha: SENHA_PADRAO } }),
+      await ok(200, "PATCH", `/funcionarios/${f.id}`, {
+        token,
+        corpo: { telefone: "1133334444" },
+      }),
+      await ok(200, "POST", "/auth/login", {
+        corpo: { login: f.login, senha: SENHA_PADRAO },
+      }),
     ];
     for (const corpo of respostas) {
       const texto = JSON.stringify(corpo);
@@ -88,7 +110,12 @@ describe("autenticação", () => {
     const nova = "outra-senha-456";
 
     assert.equal(
-      (await api("PATCH", "/auth/senha", { token: f.token, corpo: { senhaAtual: "errada-000", novaSenha: nova } })).status,
+      (
+        await api("PATCH", "/auth/senha", {
+          token: f.token,
+          corpo: { senhaAtual: "errada-000", novaSenha: nova },
+        })
+      ).status,
       401,
     );
     await ok(204, "PATCH", "/auth/senha", {
@@ -96,8 +123,18 @@ describe("autenticação", () => {
       corpo: { senhaAtual: SENHA_PADRAO, novaSenha: nova },
     });
 
-    assert.equal((await api("GET", "/auth/me", { token: f.token })).status, 401);
-    assert.equal((await api("POST", "/auth/login", { corpo: { login: f.login, senha: SENHA_PADRAO } })).status, 401);
+    assert.equal(
+      (await api("GET", "/auth/me", { token: f.token })).status,
+      401,
+    );
+    assert.equal(
+      (
+        await api("POST", "/auth/login", {
+          corpo: { login: f.login, senha: SENHA_PADRAO },
+        })
+      ).status,
+      401,
+    );
     await ok(200, "GET", "/auth/me", { token: await entrar(f.login, nova) });
   });
 
@@ -107,8 +144,18 @@ describe("autenticação", () => {
       token: await gerente(),
       corpo: { ativo: false },
     });
-    assert.equal((await api("GET", "/auth/me", { token: f.token })).status, 401);
-    assert.equal((await api("POST", "/auth/login", { corpo: { login: f.login, senha: SENHA_PADRAO } })).status, 401);
+    assert.equal(
+      (await api("GET", "/auth/me", { token: f.token })).status,
+      401,
+    );
+    assert.equal(
+      (
+        await api("POST", "/auth/login", {
+          corpo: { login: f.login, senha: SENHA_PADRAO },
+        })
+      ).status,
+      401,
+    );
   });
 
   it("remover o login (login: null) também encerra o acesso", async () => {
@@ -118,7 +165,10 @@ describe("autenticação", () => {
       corpo: { login: null },
     });
     assert.equal(depois.login, null);
-    assert.equal((await api("GET", "/auth/me", { token: f.token })).status, 401);
+    assert.equal(
+      (await api("GET", "/auth/me", { token: f.token })).status,
+      401,
+    );
   });
 
   it("bloqueia tentativas repetidas de adivinhar a senha (por login)", async () => {
@@ -130,7 +180,10 @@ describe("autenticação", () => {
       });
       bloqueou = r.status === 429;
     }
-    assert.ok(bloqueou, "esperava 429 (confira LIMITE_TENTATIVAS_LOGIN na API)");
+    assert.ok(
+      bloqueou,
+      "esperava 429 (confira LIMITE_TENTATIVAS_LOGIN na API)",
+    );
 
     // O bloqueio é por login: os colegas continuam entrando normalmente.
     const outro = await criarFuncionario();
@@ -154,7 +207,10 @@ describe("autorização por cargo", () => {
       ["POST", `/funcionarios/${atendente.id}/cargos`, { cargoId: 1 }],
       ["POST", "/cupons", {}],
       ["DELETE", "/clientes/1"],
-      ["GET", "/relatorios/mais-vendidos?dataInicio=2026-01-01&dataFim=2026-01-31"],
+      [
+        "GET",
+        "/relatorios/mais-vendidos?dataInicio=2026-01-01&dataFim=2026-01-31",
+      ],
     ];
     for (const [metodo, rota, corpo] of proibidas) {
       const r = await api(metodo, rota, { token: t, corpo });
@@ -175,12 +231,37 @@ describe("autorização por cargo", () => {
     const chefe = await criarFuncionario("gerente");
     const t = chefe.token;
 
-    assert.equal((await api("PATCH", `/funcionarios/${chefe.id}`, { token: t, corpo: { ativo: false } })).status, 409);
-    assert.equal((await api("PATCH", `/funcionarios/${chefe.id}`, { token: t, corpo: { login: null } })).status, 409);
-    assert.equal((await api("DELETE", `/funcionarios/${chefe.id}`, { token: t })).status, 409);
+    assert.equal(
+      (
+        await api("PATCH", `/funcionarios/${chefe.id}`, {
+          token: t,
+          corpo: { ativo: false },
+        })
+      ).status,
+      409,
+    );
+    assert.equal(
+      (
+        await api("PATCH", `/funcionarios/${chefe.id}`, {
+          token: t,
+          corpo: { login: null },
+        })
+      ).status,
+      409,
+    );
+    assert.equal(
+      (await api("DELETE", `/funcionarios/${chefe.id}`, { token: t })).status,
+      409,
+    );
 
-    const vinculos = await ok(200, "GET", `/funcionarios/${chefe.id}/cargos`, { token: t });
-    const r = await api("PATCH", `/funcionarios/${chefe.id}/cargos/${vinculos[0].id}`, { token: t });
+    const vinculos = await ok(200, "GET", `/funcionarios/${chefe.id}/cargos`, {
+      token: t,
+    });
+    const r = await api(
+      "PATCH",
+      `/funcionarios/${chefe.id}/cargos/${vinculos[0].id}`,
+      { token: t },
+    );
     assert.equal(r.status, 409);
   });
 
@@ -194,13 +275,19 @@ describe("autorização por cargo", () => {
     });
 
     // Mesmo token do começo ao fim: os cargos são relidos a cada requisição.
-    await ok(201, "POST", "/categorias", { token: chefe.token, corpo: { nome: unico("Cat") } });
+    await ok(201, "POST", "/categorias", {
+      token: chefe.token,
+      corpo: { nome: unico("Cat") },
+    });
 
     await ok(200, "PATCH", `/funcionarios/${chefe.id}/cargos/${vinculo.id}`, {
       token: admin,
       corpo: { dataFim: dia(-1) },
     });
-    const r = await api("POST", "/categorias", { token: chefe.token, corpo: { nome: unico("Cat") } });
+    const r = await api("POST", "/categorias", {
+      token: chefe.token,
+      corpo: { nome: unico("Cat") },
+    });
     assert.equal(r.status, 403);
   });
 });
@@ -209,12 +296,21 @@ describe("entradas malformadas não derrubam nem vazam nada", () => {
   it("JSON inválido, corpo que não é objeto e corpo gigante", async () => {
     const token = await gerente();
 
-    const invalido = await api("POST", "/categorias", { token, corpoBruto: "{nome:" });
+    const invalido = await api("POST", "/categorias", {
+      token,
+      corpoBruto: "{nome:",
+    });
     assert.equal(invalido.status, 400);
 
-    const lista = await api("POST", "/categorias", { token, corpoBruto: "[1,2,3]" });
+    const lista = await api("POST", "/categorias", {
+      token,
+      corpoBruto: "[1,2,3]",
+    });
     assert.equal(lista.status, 400);
-    assert.ok(lista.corpo.details._geral?.length > 0, "deveria explicar o erro do corpo");
+    assert.ok(
+      lista.corpo.details._geral?.length > 0,
+      "deveria explicar o erro do corpo",
+    );
 
     const gigante = await api("POST", "/categorias", {
       token,
@@ -244,21 +340,35 @@ describe("entradas malformadas não derrubam nem vazam nada", () => {
 
   it("tentativa de injeção de SQL é tratada como texto comum", async () => {
     const token = await gerente();
-    const r = await api("GET", `/clientes?busca=${encodeURIComponent("'; DROP TABLE cliente; --")}`, { token });
+    const r = await api(
+      "GET",
+      `/clientes?busca=${encodeURIComponent("'; DROP TABLE cliente; --")}`,
+      { token },
+    );
     assert.equal(r.status, 200);
     assert.equal(r.corpo.dados.length, 0);
     await ok(200, "GET", "/clientes", { token });
 
-    assert.equal((await api("GET", "/pedidos?status=RECEBIDO'%20OR%201=1--", { token })).status, 400);
+    assert.equal(
+      (await api("GET", "/pedidos?status=RECEBIDO'%20OR%201=1--", { token }))
+        .status,
+      400,
+    );
   });
 
   it("conflitos e erros não expõem nomes de colunas nem códigos internos", async () => {
     const token = await gerente();
     const nome = unico("Cat");
     await ok(201, "POST", "/categorias", { token, corpo: { nome } });
-    const repetida = await api("POST", "/categorias", { token, corpo: { nome } });
+    const repetida = await api("POST", "/categorias", {
+      token,
+      corpo: { nome },
+    });
     assert.equal(repetida.status, 409);
-    assert.equal(repetida.corpo.error, "Já existe uma categoria com este nome.");
+    assert.equal(
+      repetida.corpo.error,
+      "Já existe uma categoria com este nome.",
+    );
     assert.equal(repetida.corpo.code, undefined);
     assert.ok(!/P20\d\d|_id|\bnome\)/.test(JSON.stringify(repetida.corpo)));
   });

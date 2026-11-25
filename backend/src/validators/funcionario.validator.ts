@@ -51,7 +51,9 @@ export const listarFuncionariosQuerySchema = listarComAtivoQuerySchema.extend({
 });
 
 export type CriarFuncionarioDTO = z.infer<typeof criarFuncionarioSchema>;
-export type AtualizarFuncionarioDTO = z.infer<typeof atualizarFuncionarioSchema>;
+export type AtualizarFuncionarioDTO = z.infer<
+  typeof atualizarFuncionarioSchema
+>;
 export type ListarFuncionariosQuery = z.infer<
   typeof listarFuncionariosQuerySchema
 >;

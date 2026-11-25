@@ -142,10 +142,10 @@ export const listarPedidosQuerySchema = paginacaoQuerySchema
     dataInicio: dia.optional(),
     dataFim: dia.optional(),
   })
-  .refine(
-    (q) => !q.dataInicio || !q.dataFim || q.dataFim >= q.dataInicio,
-    { message: "dataFim não pode ser anterior a dataInicio.", path: ["dataFim"] },
-  );
+  .refine((q) => !q.dataInicio || !q.dataFim || q.dataFim >= q.dataInicio, {
+    message: "dataFim não pode ser anterior a dataInicio.",
+    path: ["dataFim"],
+  });
 
 export type CriarPedidoDTO = z.infer<typeof criarPedidoSchema>;
 export type PagamentoDTO = z.infer<typeof pagamentoSchema>;

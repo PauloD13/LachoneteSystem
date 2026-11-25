@@ -41,10 +41,20 @@ export async function gerarHashDaSenha(senha: string): Promise<string> {
   // hashes diferentes, e tabelas de hashes pré-calculados deixam de servir.
   const sal = randomBytes(TAMANHO_DO_SAL);
   const chave = await derivar(senha, sal, N, R, P, TAMANHO_DA_CHAVE);
-  return ["scrypt", N, R, P, sal.toString("base64"), chave.toString("base64")].join("$");
+  return [
+    "scrypt",
+    N,
+    R,
+    P,
+    sal.toString("base64"),
+    chave.toString("base64"),
+  ].join("$");
 }
 
-export async function conferirSenha(senha: string, gravado: string): Promise<boolean> {
+export async function conferirSenha(
+  senha: string,
+  gravado: string,
+): Promise<boolean> {
   const [algoritmo, n, r, p, salB64, chaveB64] = gravado.split("$");
   if (algoritmo !== "scrypt" || !salB64 || !chaveB64) return false;
 
@@ -66,5 +76,8 @@ export async function conferirSenha(senha: string, gravado: string): Promise<boo
 // token. Se a senha for trocada (ou o acesso removido), o resumo muda e os
 // tokens emitidos antes deixam de ser aceitos.
 export function versaoDaCredencial(senhaHash: string): string {
-  return createHash("sha256").update(senhaHash).digest("base64url").slice(0, 16);
+  return createHash("sha256")
+    .update(senhaHash)
+    .digest("base64url")
+    .slice(0, 16);
 }

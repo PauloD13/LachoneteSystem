@@ -21,7 +21,12 @@ export const senhaNova = z
 // No login não se valida formato: qualquer coisa errada vira o mesmo
 // "login ou senha inválidos", sem dar pistas.
 export const loginSchema = z.object({
-  login: z.string({ error: "Informe o login." }).trim().toLowerCase().min(1).max(50),
+  login: z
+    .string({ error: "Informe o login." })
+    .trim()
+    .toLowerCase()
+    .min(1)
+    .max(50),
   senha: z.string({ error: "Informe a senha." }).min(1).max(128),
 });
 

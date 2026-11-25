@@ -42,7 +42,9 @@ router.get("/health", async (_req: Request, res: Response) => {
         );
       }),
     ]);
-    res.status(200).json({ status: "ok", banco: "ok", timestamp: new Date().toISOString() });
+    res
+      .status(200)
+      .json({ status: "ok", banco: "ok", timestamp: new Date().toISOString() });
   } catch {
     res.status(503).json({
       status: "indisponivel",

@@ -1,0 +1,15 @@
+# Configuração lida pela maioria dos editores (VS Code com a extensão
+# EditorConfig, JetBrains, etc.): mesma indentação e fim de linha para todos.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+# Em Markdown, dois espaços no fim da linha são uma quebra de linha.
+trim_trailing_whitespace = false

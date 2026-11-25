@@ -1,6 +1,9 @@
 import type { Request, Response } from "express";
 import * as comboService from "../services/combo.service.js";
-import { idParamSchema, listarComAtivoQuerySchema } from "../validators/comum.js";
+import {
+  idParamSchema,
+  listarComAtivoQuerySchema,
+} from "../validators/comum.js";
 import {
   criarComboSchema,
   atualizarComboSchema,

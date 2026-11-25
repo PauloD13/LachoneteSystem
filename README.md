@@ -1,5 +1,7 @@
 # LanchoneteSystem
 
+[![CI](https://github.com/PauloD13/LachoneteSystem/actions/workflows/ci.yml/badge.svg)](https://github.com/PauloD13/LachoneteSystem/actions/workflows/ci.yml)
+
 Sistema acadêmico de gestão para a **Lanchonete Sabor & Cia**, desenvolvido para aplicar modelagem de banco de dados (MER/DER/3FN) e implementação fullstack com deploy em Docker Compose.
 
 ## Contexto do projeto
@@ -10,7 +12,7 @@ Este repositório implementa a situação de aprendizagem descrita em `docs/Aná
 - modelo lógico relacional normalizado;
 - documentação técnica de apoio;
 - backend conectado a PostgreSQL;
-- frontend web (estrutura inicial já criada).
+- frontend web (base pronta; telas em construção a partir do protótipo).
 
 O foco principal é garantir consistência entre **regras de negócio**, **schema do banco** e **camada de aplicação**.
 
@@ -28,6 +30,7 @@ O domínio contempla:
 
 ```text
 LachoneteSystem/
+├── .github/                # CI (GitHub Actions), Dependabot e modelo de PR
 ├── backend/                # API Node.js + TypeScript + Express + Prisma Client
 │   └── tests/e2e/          # Testes automatizados de ponta a ponta
 ├── database/
@@ -35,9 +38,9 @@ LachoneteSystem/
 │       ├── 001_schema.sql  # Schema SQL (fonte da verdade do banco)
 │       └── 002_seed.sql    # Dados iniciais: cargos, formas de pagamento, categorias
 ├── docs/                   # Artefatos de modelagem e justificativas
-├── frontend/               # Estrutura inicial do frontend
+├── frontend/               # Telas: React + TypeScript + Vite (ver frontend/README.md)
 ├── scripts/                # Scripts utilitários de estrutura
-├── docker-compose.yml      # Orquestra backend + PostgreSQL
+├── docker-compose.yml      # Orquestra backend (API + telas) + PostgreSQL
 └── .env.example            # Variáveis de ambiente da stack
 ```
 
@@ -51,6 +54,14 @@ LachoneteSystem/
 - Zod (validação de entrada e ambiente)
 - Autenticação por token (JWT) com senhas em hash scrypt; autorização por cargo
 - helmet (cabeçalhos de segurança) e express-rate-limit (limite de requisições)
+
+### Frontend
+
+- React 19 + TypeScript, empacotado com Vite
+- React Router (navegação entre telas)
+- CSS próprio (CSS Modules + variáveis de tema), sem framework de UI
+- `fetch` nativo para consumir a API
+- Detalhes, estrutura e convenções em `frontend/README.md`
 
 ### Banco de dados
 
@@ -92,7 +103,6 @@ Preencha os valores obrigatórios (o próprio `.env.example` explica cada um):
 | --- | --- |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Credenciais e nome do banco |
 | `HOST_BACKEND_PORT`, `BACKEND_PORT` | Porta no servidor → porta no container |
-| `CORS_ORIGIN` | Endereço(s) do frontend autorizados a chamar a API |
 | `JWT_SECRET` | Chave que assina os logins (mínimo de 32 caracteres, aleatória e secreta) |
 | `ADMIN_LOGIN`, `ADMIN_SENHA` | Primeiro usuário (gerente), criado na primeira subida |
 
@@ -110,8 +120,14 @@ docker compose up --build
 
 Serviços:
 
-- `db` (PostgreSQL)
-- `backend` (API)
+- `db` (PostgreSQL) — sem porta exposta: só o backend o acessa, pela rede
+  interna do Compose;
+- `backend` — a API **e as telas**, no mesmo endereço. O Dockerfile compila
+  o frontend e o Express o serve.
+
+Depois de subir, o sistema fica em `http://<ip-do-servidor>:HOST_BACKEND_PORT`
+(no próprio servidor, `http://localhost:HOST_BACKEND_PORT`). A API responde
+no mesmo endereço, sob `/api`.
 
 O schema e os dados iniciais são criados automaticamente no primeiro start do
 banco via `database/init/`. `docker compose ps` mostra o backend como
@@ -126,7 +142,7 @@ banco via `database/init/`. `docker compose ps` mostra o backend como
 > docker compose up --build
 > ```
 
-## Execução local do backend (sem Docker)
+## Execução local para desenvolvimento (sem Docker)
 
 Útil no desenvolvimento: o backend roda na sua máquina com `npm run dev`
 (recarrega a cada alteração) e só o banco fica num container.
@@ -169,6 +185,17 @@ O `.env.example` já vem pronto para esse banco. Na primeira subida o backend
 cria o gerente inicial (`admin` / `admin12345`). Confira em
 `http://localhost:3000/api/health`.
 
+**3. Rode o frontend**, em outro terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev               # http://localhost:5173
+```
+
+O Vite repassa ao backend (porta 3000) tudo o que começa com `/api`, então
+basta abrir `http://localhost:5173` e entrar com `admin` / `admin12345`.
+
 Scripts disponíveis no backend:
 
 - `npm run dev` — desenvolvimento com reload
@@ -176,6 +203,7 @@ Scripts disponíveis no backend:
 - `npm run start` — execução em produção
 - `npm run typecheck` — validação de tipos
 - `npm run test:e2e` — testes de ponta a ponta (ver abaixo)
+- `npm run lint` / `npm run format` — ver "Qualidade de código e CI"
 
 ## Testes automatizados
 
@@ -205,6 +233,40 @@ Cada teste cria os próprios dados, então a suíte pode rodar várias vezes no
 mesmo banco — mas ela faz ~500 requisições: para repetir em seguida, use
 `LIMITE_REQUISICOES_POR_MINUTO=0` na API.
 
+## Qualidade de código e CI
+
+As duas pastas (`backend/` e `frontend/`) têm os mesmos comandos:
+
+| Comando | O que faz |
+| --- | --- |
+| `npm run format` | **Prettier**: formata o código (aspas, espaços, quebras de linha) no padrão do projeto |
+| `npm run format:check` | Só confere, sem alterar (é o que o CI roda) |
+| `npm run lint` | **ESLint**: aponta erros prováveis (variável não usada, `any`, regras do React) |
+| `npm test` / `npm run test:e2e` | Testes do frontend (Vitest) / da API (ponta a ponta) |
+
+Dica: rode `npm run format` antes de cada commit e o CI nunca vai reclamar de
+formatação. Os arquivos `.editorconfig` e `.gitattributes` deixam indentação e
+fim de linha iguais em todas as máquinas (inclusive no Windows).
+
+**GitHub Actions** (`.github/workflows/ci.yml`) roda a cada push, em qualquer
+branch, e mostra ✔ ou ✖ ao lado do commit:
+
+| Job | O que confere |
+| --- | --- |
+| Backend | formatação, lint, compilação, e os 60 testes da API contra um PostgreSQL criado pelos scripts de `database/init/` |
+| Frontend | formatação, lint, testes unitários e build |
+| Docker Compose | `docker compose up` do zero (com senha de banco cheia de caracteres especiais), espera ficar `healthy`, confere que as telas são servidas e roda os 60 testes contra o container |
+
+Quando um passo falha, a aba **Actions** mostra qual e por quê; o comando do
+passo é o mesmo que você roda localmente.
+
+**Dependabot** (`.github/dependabot.yml`) abre PRs semanais com as
+atualizações das dependências (pequenas agrupadas; versões major em PR
+separado). O CI roda nesses PRs: se ficar verde, é revisar e mesclar.
+
+**Modelo de PR** (`.github/pull_request_template.md`): todo PR novo já vem
+com as seções e a lista de conferência.
+
 ## Status atual do desenvolvimento
 
 - ✅ Modelagem de dados e documentação técnica consolidadas;
@@ -212,7 +274,10 @@ mesmo banco — mas ela faz ~500 requisições: para repetir em seguida, use
 - ✅ Backend completo: todos os cadastros, pedido (itens, adicionais,
   pagamentos, entrega, avaliação, histórico de status) e relatórios;
 - ✅ Autenticação, autorização por cargo e testes automatizados;
-- 🚧 Frontend ainda em estrutura inicial (pastas base criadas).
+- ✅ Base do frontend: cliente da API, login, rotas protegidas por cargo,
+  formatadores, tema em CSS; servido pelo backend no Docker;
+- ✅ CI no GitHub Actions (lint, formatação, testes, Docker Compose);
+- 🚧 Telas do sistema: em construção a partir do protótipo.
 
 ## Autenticação e permissões
 
@@ -374,6 +439,5 @@ frente da API; e o contador de limite de requisições fica na memória de um
 
 ## Próximos incrementos sugeridos
 
-- adicionar frontend para fluxo completo de pedidos (tela de login, guardar
-  o token e enviá-lo no cabeçalho `Authorization`);
-- incluir o frontend no `docker-compose.yml`.
+- telas do sistema conforme o protótipo: login, cadastros, novo pedido,
+  painel de pedidos, relatórios.

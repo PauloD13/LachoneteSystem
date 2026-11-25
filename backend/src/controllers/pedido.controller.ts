@@ -60,9 +60,7 @@ export async function definirEntregador(
 ): Promise<void> {
   const { id } = idParamSchema.parse(req.params);
   const { entregadorId } = definirEntregadorSchema.parse(req.body);
-  res
-    .status(200)
-    .json(await pedidoService.definirEntregador(id, entregadorId));
+  res.status(200).json(await pedidoService.definirEntregador(id, entregadorId));
 }
 
 export async function avaliar(req: Request, res: Response): Promise<void> {

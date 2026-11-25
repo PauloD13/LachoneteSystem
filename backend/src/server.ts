@@ -11,7 +11,10 @@ const port = environment.PORT;
 
 //SECTION - Iniciando servidor HTTP
 const server = app.listen(port, () => {
-  logger.info("servidor no ar", { porta: port, ambiente: environment.NODE_ENV });
+  logger.info("servidor no ar", {
+    porta: port,
+    ambiente: environment.NODE_ENV,
+  });
 });
 
 //SECTION - Gerente inicial (ver services/auth.service.ts)
@@ -28,9 +31,12 @@ async function prepararAcessoInicial(): Promise<void> {
         "banco de dados inacessível; nova tentativa em 5s (o Postgres está rodando? confira DATABASE_URL)",
       );
     } else {
-      logger.error("falha ao verificar o gerente inicial; nova tentativa em 5s", {
-        erro,
-      });
+      logger.error(
+        "falha ao verificar o gerente inicial; nova tentativa em 5s",
+        {
+          erro,
+        },
+      );
     }
     setTimeout(prepararAcessoInicial, 5000).unref();
   }
@@ -44,7 +50,9 @@ let encerrando = false;
 const shutdown = () => {
   if (encerrando) return;
   encerrando = true;
-  logger.info("sinal de encerramento recebido; finalizando requisições em andamento");
+  logger.info(
+    "sinal de encerramento recebido; finalizando requisições em andamento",
+  );
 
   // server.close espera as conexões abertas terminarem. Se alguma ficar
   // pendurada, este prazo garante que o processo saia mesmo assim (antes de

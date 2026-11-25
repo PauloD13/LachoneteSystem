@@ -11,6 +11,10 @@ const funcionarioCargoRoutes = Router({ mergeParams: true });
 // só gerente.
 funcionarioCargoRoutes.get("/", funcionarioCargoController.listar);
 funcionarioCargoRoutes.post("/", soGerente, funcionarioCargoController.abrir);
-funcionarioCargoRoutes.patch("/:vinculoId", soGerente, funcionarioCargoController.encerrar);
+funcionarioCargoRoutes.patch(
+  "/:vinculoId",
+  soGerente,
+  funcionarioCargoController.encerrar,
+);
 
 export default funcionarioCargoRoutes;

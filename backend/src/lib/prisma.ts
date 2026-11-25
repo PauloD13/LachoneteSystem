@@ -27,7 +27,9 @@ type Cliente = ReturnType<typeof criarCliente>;
  */
 export type Tx = Omit<Cliente, ITXClientDenyList>;
 
-const globalForPrisma = globalThis as unknown as { prisma: Cliente | undefined };
+const globalForPrisma = globalThis as unknown as {
+  prisma: Cliente | undefined;
+};
 
 export const prisma = globalForPrisma.prisma ?? criarCliente();
 

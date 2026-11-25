@@ -18,7 +18,10 @@ export async function abrir(
     select: { ativo: true },
   });
   if (!funcionario.ativo) {
-    throw new AppError(409, "Funcionário desativado não pode receber um novo cargo.");
+    throw new AppError(
+      409,
+      "Funcionário desativado não pode receber um novo cargo.",
+    );
   }
   const cargo = await prisma.cargo.findUnique({
     where: { id: cargoId },
