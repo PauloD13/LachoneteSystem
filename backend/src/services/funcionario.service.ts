@@ -122,13 +122,24 @@ export async function atualizar(
     } else {
       const loginFinal = login ?? atual.login;
       if (senha !== undefined && loginFinal === null) {
-        throw new AppError(400, "Informe também o login para dar acesso ao sistema.");
+        throw new AppError(
+          400,
+          "Informe também o login para dar acesso ao sistema.",
+        );
       }
-      if (login !== undefined && atual.senhaHash === null && senha === undefined) {
-        throw new AppError(400, "Informe também a senha para dar acesso ao sistema.");
+      if (
+        login !== undefined &&
+        atual.senhaHash === null &&
+        senha === undefined
+      ) {
+        throw new AppError(
+          400,
+          "Informe também a senha para dar acesso ao sistema.",
+        );
       }
       if (login !== undefined) credenciais.login = login;
-      if (senha !== undefined) credenciais.senhaHash = await gerarHashDaSenha(senha);
+      if (senha !== undefined)
+        credenciais.senhaHash = await gerarHashDaSenha(senha);
     }
 
     return tx.funcionario.update({

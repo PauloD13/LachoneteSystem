@@ -43,7 +43,10 @@ function registrar(nivel: Nivel, mensagem: string, campos: Campos = {}) {
 }
 
 export const logger = {
-  info: (mensagem: string, campos?: Campos) => registrar("info", mensagem, campos),
-  warn: (mensagem: string, campos?: Campos) => registrar("warn", mensagem, campos),
-  error: (mensagem: string, campos?: Campos) => registrar("error", mensagem, campos),
+  info: (mensagem: string, campos?: Campos) =>
+    registrar("info", mensagem, campos),
+  warn: (mensagem: string, campos?: Campos) =>
+    registrar("warn", mensagem, campos),
+  error: (mensagem: string, campos?: Campos) =>
+    registrar("error", mensagem, campos),
 };

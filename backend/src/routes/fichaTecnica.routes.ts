@@ -6,7 +6,15 @@ import { soGerente } from "../middlewares/autenticacao.js";
 const fichaTecnicaRoutes = Router({ mergeParams: true });
 
 fichaTecnicaRoutes.get("/", fichaTecnicaController.listar);
-fichaTecnicaRoutes.put("/:ingredienteId", soGerente, fichaTecnicaController.definir);
-fichaTecnicaRoutes.delete("/:ingredienteId", soGerente, fichaTecnicaController.remover);
+fichaTecnicaRoutes.put(
+  "/:ingredienteId",
+  soGerente,
+  fichaTecnicaController.definir,
+);
+fichaTecnicaRoutes.delete(
+  "/:ingredienteId",
+  soGerente,
+  fichaTecnicaController.remover,
+);
 
 export default fichaTecnicaRoutes;

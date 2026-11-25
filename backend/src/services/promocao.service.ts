@@ -33,10 +33,7 @@ function achatar(promocao: PromocaoComProdutos) {
   };
 }
 
-async function exigirProdutos(
-  tx: Tx,
-  produtoIds: number[],
-) {
+async function exigirProdutos(tx: Tx, produtoIds: number[]) {
   const encontrados = await tx.produto.findMany({
     where: { id: { in: produtoIds } },
     select: { id: true },
@@ -130,7 +127,9 @@ export async function atualizar(id: number, dados: AtualizarPromocaoDTO) {
         (campos.tipoDesconto !== undefined &&
           campos.tipoDesconto !== atual.tipoDesconto) ||
         (campos.valorDesconto !== undefined &&
-          !new Prisma.Decimal(campos.valorDesconto).equals(atual.valorDesconto)) ||
+          !new Prisma.Decimal(campos.valorDesconto).equals(
+            atual.valorDesconto,
+          )) ||
         (campos.dataInicio !== undefined &&
           !mesmoDia(campos.dataInicio, atual.dataInicio)) ||
         (produtoIds !== undefined &&

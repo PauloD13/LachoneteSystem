@@ -49,7 +49,9 @@ function perfil(funcionario: FuncionarioComCredencial): UsuarioAutenticado {
   return {
     id: funcionario.id,
     nome: funcionario.nome,
-    cargos: [...new Set(funcionario.funcionarioCargos.map((v) => v.cargo.nome))],
+    cargos: [
+      ...new Set(funcionario.funcionarioCargos.map((v) => v.cargo.nome)),
+    ],
   };
 }
 
@@ -75,7 +77,11 @@ export async function login({ login, senha }: LoginDTO) {
   const token = jwt.sign(
     { ver: versaoDaCredencial(funcionario.senhaHash) },
     environment.JWT_SECRET,
-    { subject: String(funcionario.id), expiresIn: segundos, algorithm: ALGORITMO },
+    {
+      subject: String(funcionario.id),
+      expiresIn: segundos,
+      algorithm: ALGORITMO,
+    },
   );
 
   return {

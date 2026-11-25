@@ -14,7 +14,11 @@ export async function criar(dados: CriarMesaDTO) {
 export async function listar({ ativa, ...pagina }: ListarMesasQuery) {
   const where = ativa === undefined ? {} : { ativa };
   const [dados, total] = await prisma.$transaction([
-    prisma.mesa.findMany({ where, orderBy: { numero: "asc" }, ...recorte(pagina) }),
+    prisma.mesa.findMany({
+      where,
+      orderBy: { numero: "asc" },
+      ...recorte(pagina),
+    }),
     prisma.mesa.count({ where }),
   ]);
   return paginar(dados, total, pagina);

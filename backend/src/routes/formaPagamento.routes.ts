@@ -8,7 +8,15 @@ const formaPagamentoRoutes = Router();
 formaPagamentoRoutes.get("/", formaPagamentoController.listar);
 formaPagamentoRoutes.get("/:id", formaPagamentoController.buscarPorId);
 formaPagamentoRoutes.post("/", soGerente, formaPagamentoController.criar);
-formaPagamentoRoutes.patch("/:id", soGerente, formaPagamentoController.atualizar);
-formaPagamentoRoutes.delete("/:id", soGerente, formaPagamentoController.remover);
+formaPagamentoRoutes.patch(
+  "/:id",
+  soGerente,
+  formaPagamentoController.atualizar,
+);
+formaPagamentoRoutes.delete(
+  "/:id",
+  soGerente,
+  formaPagamentoController.remover,
+);
 
 export default formaPagamentoRoutes;

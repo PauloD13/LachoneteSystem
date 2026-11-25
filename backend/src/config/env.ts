@@ -77,7 +77,10 @@ const enviromentSchema = z
       .string()
       .trim()
       .toLowerCase()
-      .regex(/^[a-z0-9._-]{3,50}$/, "ADMIN_LOGIN: 3 a 50 letras, números, . _ -")
+      .regex(
+        /^[a-z0-9._-]{3,50}$/,
+        "ADMIN_LOGIN: 3 a 50 letras, números, . _ -",
+      )
       .optional(),
     ADMIN_SENHA: z
       .string()
@@ -92,7 +95,8 @@ const enviromentSchema = z
     LIMITE_TENTATIVAS_LOGIN: inteiro(10),
   })
   .superRefine((env, ctx) => {
-    const temPartes = env.DB_HOST && env.DB_USER && env.DB_PASSWORD && env.DB_NAME;
+    const temPartes =
+      env.DB_HOST && env.DB_USER && env.DB_PASSWORD && env.DB_NAME;
     if (!env.DATABASE_URL && !temPartes) {
       ctx.addIssue({
         code: "custom",
@@ -122,7 +126,9 @@ const parsedEnv = enviromentSchema.safeParse(semVazias);
 // 4. Verifica se a validação falhou e reporta o erro imediatamente
 if (!parsedEnv.success) {
   console.error("Erro de validação nas variáveis de ambiente:");
-  console.error(JSON.stringify(z.flattenError(parsedEnv.error).fieldErrors, null, 2));
+  console.error(
+    JSON.stringify(z.flattenError(parsedEnv.error).fieldErrors, null, 2),
+  );
 
   // Encerra a aplicação imediatamente se faltar algo obrigatório
   process.exit(1);

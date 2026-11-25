@@ -9,6 +9,9 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test:e2e": "node --import tsx --test --test-reporter=spec \"tests/e2e/*.test.ts\"",
     "postinstall": "prisma generate"
   },
@@ -27,12 +30,17 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.6.1",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
     "prisma": "^6.19.3",
     "tsx": "^4.23.13",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.74.0"
   }
 }

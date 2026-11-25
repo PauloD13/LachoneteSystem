@@ -4,7 +4,10 @@ import { environment } from "./config/env.js";
 import routes from "./routes/index.js";
 import { errorHandler, rotaNaoEncontrada } from "./middlewares/errorHandler.js";
 import { registrarRequisicao } from "./middlewares/registro.js";
-import { cabecalhosDeSeguranca, limiteGlobal } from "./middlewares/seguranca.js";
+import {
+  cabecalhosDeSeguranca,
+  limiteGlobal,
+} from "./middlewares/seguranca.js";
 
 const app = express();
 

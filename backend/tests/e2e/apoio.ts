@@ -51,7 +51,8 @@ export async function api(
   const resposta = await fetch(`${API_URL}${rota}`, {
     method: metodo,
     headers: cabecalhos,
-    body: corpoBruto ?? (corpo === undefined ? undefined : JSON.stringify(corpo)),
+    body:
+      corpoBruto ?? (corpo === undefined ? undefined : JSON.stringify(corpo)),
   });
 
   const texto = await resposta.text();
@@ -63,7 +64,11 @@ export async function api(
       conteudo = texto;
     }
   }
-  return { status: resposta.status, corpo: conteudo, cabecalhos: resposta.headers };
+  return {
+    status: resposta.status,
+    corpo: conteudo,
+    cabecalhos: resposta.headers,
+  };
 }
 
 /** Chama a API e exige o status esperado; devolve o corpo. */
@@ -103,7 +108,9 @@ export function dia(dias = 0): string {
 }
 
 export async function entrar(login: string, senha: string): Promise<string> {
-  const corpo = await ok(200, "POST", "/auth/login", { corpo: { login, senha } });
+  const corpo = await ok(200, "POST", "/auth/login", {
+    corpo: { login, senha },
+  });
   return corpo.token;
 }
 
@@ -132,7 +139,9 @@ export interface Funcionario {
 }
 
 /** Cria um funcionário com login e (opcionalmente) cargos vigentes hoje. */
-export async function criarFuncionario(...nomesDosCargos: string[]): Promise<Funcionario> {
+export async function criarFuncionario(
+  ...nomesDosCargos: string[]
+): Promise<Funcionario> {
   const token = await gerente();
   const login = unico("func");
   const funcionario = await ok(201, "POST", "/funcionarios", {
@@ -146,7 +155,11 @@ export async function criarFuncionario(...nomesDosCargos: string[]): Promise<Fun
       corpo: { cargoId: ids[nome] },
     });
   }
-  return { id: funcionario.id, login, token: await entrar(login, SENHA_PADRAO) };
+  return {
+    id: funcionario.id,
+    login,
+    token: await entrar(login, SENHA_PADRAO),
+  };
 }
 
 export async function criarCategoria(): Promise<number> {
@@ -197,7 +210,11 @@ export async function idDaFormaDePagamento(nome: string): Promise<number> {
 }
 
 /** Leva o pedido pelos status informados, um de cada vez. */
-export async function avancar(token: string, pedidoId: number, ...status: string[]) {
+export async function avancar(
+  token: string,
+  pedidoId: number,
+  ...status: string[]
+) {
   let pedido: Json;
   for (const s of status) {
     pedido = await ok(200, "POST", `/pedidos/${pedidoId}/status`, {

@@ -42,7 +42,11 @@ before(async () => {
 const novoPedido = (extra: object = {}) =>
   ok(201, "POST", "/pedidos", {
     token: atendente.token,
-    corpo: { canal: "BALCAO", itens: [{ itemVendavelId: produto.id, quantidade: 1 }], ...extra },
+    corpo: {
+      canal: "BALCAO",
+      itens: [{ itemVendavelId: produto.id, quantidade: 1 }],
+      ...extra,
+    },
   });
 
 describe("requisições simultâneas", () => {
@@ -56,7 +60,9 @@ describe("requisições simultâneas", () => {
     );
     assert.equal(contar(respostas, 201), 1);
     assert.equal(contar(respostas, 409), SIMULTANEAS - 1);
-    const final = await ok(200, "GET", `/pedidos/${pedido.id}`, { token: admin });
+    const final = await ok(200, "GET", `/pedidos/${pedido.id}`, {
+      token: admin,
+    });
     assert.equal(final.totais.totalPago, "10.00");
   });
 
@@ -69,25 +75,42 @@ describe("requisições simultâneas", () => {
       }),
     );
     assert.equal(contar(respostas, 200), 1);
-    const final = await ok(200, "GET", `/pedidos/${pedido.id}`, { token: admin });
-    assert.deepEqual(final.statusHistorico.map((s: Json) => s.status), ["RECEBIDO", "EM_PREPARO"]);
+    const final = await ok(200, "GET", `/pedidos/${pedido.id}`, {
+      token: admin,
+    });
+    assert.deepEqual(
+      final.statusHistorico.map((s: Json) => s.status),
+      ["RECEBIDO", "EM_PREPARO"],
+    );
     assert.equal(final.statusAtual, "EM_PREPARO");
   });
 
   it("cancelar e avançar ao mesmo tempo: o status atual sempre bate com o histórico", async () => {
     for (let rodada = 0; rodada < 5; rodada += 1) {
-      const pedido = await novoPedido({ pagamentos: [{ formaPagamentoId: dinheiro, valorPago: 10 }] });
+      const pedido = await novoPedido({
+        pagamentos: [{ formaPagamentoId: dinheiro, valorPago: 10 }],
+      });
       await Promise.all(
         ["CANCELADO", "EM_PREPARO", "CANCELADO", "EM_PREPARO"].map((status) =>
-          api("POST", `/pedidos/${pedido.id}/status`, { token: atendente.token, corpo: { status } }),
+          api("POST", `/pedidos/${pedido.id}/status`, {
+            token: atendente.token,
+            corpo: { status },
+          }),
         ),
       );
-      const final = await ok(200, "GET", `/pedidos/${pedido.id}`, { token: admin });
+      const final = await ok(200, "GET", `/pedidos/${pedido.id}`, {
+        token: admin,
+      });
       assert.equal(final.statusAtual, final.statusHistorico.at(-1).status);
-      const cancelados = final.statusHistorico.filter((s: Json) => s.status === "CANCELADO").length;
+      const cancelados = final.statusHistorico.filter(
+        (s: Json) => s.status === "CANCELADO",
+      ).length;
       assert.ok(cancelados <= 1);
       // Estornado se, e somente se, terminou cancelado.
-      assert.equal(Boolean(final.pagamentos[0].estornadoEm), final.statusAtual === "CANCELADO");
+      assert.equal(
+        Boolean(final.pagamentos[0].estornadoEm),
+        final.statusAtual === "CANCELADO",
+      );
     }
   });
 
@@ -96,7 +119,13 @@ describe("requisições simultâneas", () => {
     const codigo = unico("UNICO").toUpperCase();
     await ok(201, "POST", "/cupons", {
       token: admin,
-      corpo: { codigo, tipoDesconto: "PERCENTUAL", valorDesconto: 10, dataInicio: dia(0), dataFim: dia(0) },
+      corpo: {
+        codigo,
+        tipoDesconto: "PERCENTUAL",
+        valorDesconto: 10,
+        dataInicio: dia(0),
+        dataFim: dia(0),
+      },
     });
     const respostas = await emParalelo(() =>
       api("POST", "/pedidos", {
@@ -116,10 +145,16 @@ describe("requisições simultâneas", () => {
   it("10 avaliações ao mesmo tempo: o pedido fica com uma", async () => {
     const pedido = await novoPedido();
     for (const status of ["EM_PREPARO", "PRONTO", "ENTREGUE_RETIRADO"]) {
-      await ok(200, "POST", `/pedidos/${pedido.id}/status`, { token: atendente.token, corpo: { status } });
+      await ok(200, "POST", `/pedidos/${pedido.id}/status`, {
+        token: atendente.token,
+        corpo: { status },
+      });
     }
     const respostas = await emParalelo(() =>
-      api("POST", `/pedidos/${pedido.id}/avaliacao`, { token: atendente.token, corpo: { nota: 4 } }),
+      api("POST", `/pedidos/${pedido.id}/avaliacao`, {
+        token: atendente.token,
+        corpo: { nota: 4 },
+      }),
     );
     assert.equal(contar(respostas, 201), 1);
     assert.equal(contar(respostas, 409), SIMULTANEAS - 1);
@@ -130,12 +165,16 @@ describe("requisições simultâneas", () => {
     const { cozinheiro } = await idsDosCargos();
     const rota = `/funcionarios/${f.id}/cargos`;
 
-    const aberturas = await emParalelo(() => api("POST", rota, { token: admin, corpo: { cargoId: cozinheiro } }));
+    const aberturas = await emParalelo(() =>
+      api("POST", rota, { token: admin, corpo: { cargoId: cozinheiro } }),
+    );
     assert.equal(contar(aberturas, 201), 1);
     assert.equal(contar(aberturas, 409), SIMULTANEAS - 1);
 
     const [vinculo] = await ok(200, "GET", rota, { token: admin });
-    const encerramentos = await emParalelo(() => api("PATCH", `${rota}/${vinculo.id}`, { token: admin }));
+    const encerramentos = await emParalelo(() =>
+      api("PATCH", `${rota}/${vinculo.id}`, { token: admin }),
+    );
     assert.equal(contar(encerramentos, 200), 1);
     assert.equal(contar(encerramentos, 409), SIMULTANEAS - 1);
   });
@@ -143,7 +182,10 @@ describe("requisições simultâneas", () => {
   it("10 cadastros com o mesmo login: um só", async () => {
     const login = unico("gemeo");
     const respostas = await emParalelo(() =>
-      api("POST", "/funcionarios", { token: admin, corpo: { nome: "Gêmeo", login, senha: "senha-de-teste-123" } }),
+      api("POST", "/funcionarios", {
+        token: admin,
+        corpo: { nome: "Gêmeo", login, senha: "senha-de-teste-123" },
+      }),
     );
     assert.equal(contar(respostas, 201), 1);
     assert.equal(contar(respostas, 409), SIMULTANEAS - 1);

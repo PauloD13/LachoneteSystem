@@ -19,13 +19,20 @@ const CONFLITOS: Record<string, string> = {
   Mesa: "Já existe uma mesa com este número.",
   Cupom: "Já existe um cupom com este código.",
   Funcionario: "Este login já está em uso.",
-  FuncionarioCargo: "O funcionário já exerce este cargo (há um vínculo em aberto).",
+  FuncionarioCargo:
+    "O funcionário já exerce este cargo (há um vínculo em aberto).",
   Pedido: "Este cliente já utilizou este cupom.",
   AvaliacaoPedido: "Este pedido já foi avaliado.",
 };
 
 // Códigos do Prisma que significam "não consegui falar com o banco".
-const BANCO_INDISPONIVEL = new Set(["P1001", "P1002", "P1008", "P1017", "P2024"]);
+const BANCO_INDISPONIVEL = new Set([
+  "P1001",
+  "P1002",
+  "P1008",
+  "P1017",
+  "P2024",
+]);
 
 function bancoIndisponivel(err: unknown): boolean {
   if (err instanceof Prisma.PrismaClientInitializationError) return true;
@@ -49,7 +56,9 @@ export function errorHandler(
       // `_geral` traz os erros que não pertencem a um campo específico
       // (ex.: o corpo enviado não é um objeto JSON).
       details:
-        formErrors.length > 0 ? { ...fieldErrors, _geral: formErrors } : fieldErrors,
+        formErrors.length > 0
+          ? { ...fieldErrors, _geral: formErrors }
+          : fieldErrors,
     });
     return;
   }
@@ -75,9 +84,13 @@ export function errorHandler(
 
   // 4. Banco fora do ar: 503 (temporário, vale tentar de novo), não 500.
   if (bancoIndisponivel(err)) {
-    logger.error("banco de dados indisponível", { id: req.idRequisicao, erro: err });
+    logger.error("banco de dados indisponível", {
+      id: req.idRequisicao,
+      erro: err,
+    });
     res.status(503).json({
-      error: "Serviço temporariamente indisponível. Tente novamente em instantes.",
+      error:
+        "Serviço temporariamente indisponível. Tente novamente em instantes.",
     });
     return;
   }
@@ -134,7 +147,8 @@ export function errorHandler(
         erro: err,
       });
       res.status(violouCheck ? 400 : 409).json({
-        error: "Dados inválidos: violam uma regra de integridade do banco de dados.",
+        error:
+          "Dados inválidos: violam uma regra de integridade do banco de dados.",
       });
       return;
     }

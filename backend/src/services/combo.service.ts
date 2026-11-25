@@ -41,10 +41,7 @@ function achatar(combo: ComboComRelacoes) {
   };
 }
 
-async function exigirProdutos(
-  tx: Tx,
-  produtoIds: number[],
-) {
+async function exigirProdutos(tx: Tx, produtoIds: number[]) {
   const encontrados = await tx.produto.findMany({
     where: { id: { in: produtoIds } },
     select: { id: true },
