@@ -29,7 +29,7 @@ export const ORDEM_DOS_STATUS: StatusPedido[] = [
 export const ROTULO_CANAL: Record<Canal, string> = {
   BALCAO: "Balcão",
   TELEFONE: "Telefone",
-  APP: "Aplicativo",
+  APP: "App",
 };
 
 export const ROTULO_ATENDIMENTO: Record<TipoAtendimento, string> = {
@@ -41,7 +41,7 @@ export const ROTULO_ATENDIMENTO: Record<TipoAtendimento, string> = {
 export const ROTULO_UNIDADE: Record<UnidadeMedida, string> = {
   kg: "kg",
   litro: "litro",
-  unidade: "unidade",
+  unidade: "un.",
 };
 
 const FORMAS_DE_PAGAMENTO: Record<string, string> = {

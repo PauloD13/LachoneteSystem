@@ -5,8 +5,11 @@
  *   2. bundle.css  — componentes do design system (classes sc-*) e movimento
  *   3. base.css    — o que o design system não cobre: reset dos elementos
  *                    HTML e utilitários do sistema
+ *   4. app.css     — padrões de layout das telas (cartão, segmentado,
+ *                    navegação, folha inferior, tabela), classes ui-*
  * Estilos de uma tela específica ficam no .module.css da própria tela.
  */
 @import "./styles/tokens.css";
 @import "./styles/bundle.css";
 @import "./styles/base.css";
+@import "./styles/app.css";

@@ -99,12 +99,12 @@ cp .env.example .env
 
 Preencha os valores obrigatórios (o próprio `.env.example` explica cada um):
 
-| Variável | Para quê |
-| --- | --- |
-| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Credenciais e nome do banco |
-| `HOST_BACKEND_PORT`, `BACKEND_PORT` | Porta no servidor → porta no container |
-| `JWT_SECRET` | Chave que assina os logins (mínimo de 32 caracteres, aleatória e secreta) |
-| `ADMIN_LOGIN`, `ADMIN_SENHA` | Primeiro usuário (gerente), criado na primeira subida |
+| Variável                                            | Para quê                                                                  |
+| --------------------------------------------------- | ------------------------------------------------------------------------- |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Credenciais e nome do banco                                               |
+| `HOST_BACKEND_PORT`, `BACKEND_PORT`                 | Porta no servidor → porta no container                                    |
+| `JWT_SECRET`                                        | Chave que assina os logins (mínimo de 32 caracteres, aleatória e secreta) |
+| `ADMIN_LOGIN`, `ADMIN_SENHA`                        | Primeiro usuário (gerente), criado na primeira subida                     |
 
 Para gerar um `JWT_SECRET`:
 
@@ -211,12 +211,12 @@ Scripts disponíveis no backend:
 frontend fará, contra um PostgreSQL de verdade — exercitam de uma vez rotas,
 validações, regras de negócio, triggers e constraints do banco:
 
-| Arquivo | O que verifica |
-| --- | --- |
-| `seguranca.test.ts` | login, tokens forjados, permissões por cargo, bloqueio de tentativas, entradas malformadas |
-| `cadastros.test.ts` | paginação, validações, produto × combo, desativação, cargos e vínculos, promoções |
-| `pedidos.test.ts` | registro, preço congelado, status, entrega, pagamentos, estorno, relatórios |
-| `concorrencia.test.ts` | 10 requisições simultâneas iguais: só uma pode ter efeito |
+| Arquivo                | O que verifica                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| `seguranca.test.ts`    | login, tokens forjados, permissões por cargo, bloqueio de tentativas, entradas malformadas |
+| `cadastros.test.ts`    | paginação, validações, produto × combo, desativação, cargos e vínculos, promoções          |
+| `pedidos.test.ts`      | registro, preço congelado, status, entrega, pagamentos, estorno, relatórios                |
+| `concorrencia.test.ts` | 10 requisições simultâneas iguais: só uma pode ter efeito                                  |
 
 Com a API no ar (local ou no Docker) e o banco criado pelos scripts de
 `database/init/`:
@@ -237,12 +237,12 @@ mesmo banco — mas ela faz ~500 requisições: para repetir em seguida, use
 
 As duas pastas (`backend/` e `frontend/`) têm os mesmos comandos:
 
-| Comando | O que faz |
-| --- | --- |
-| `npm run format` | **Prettier**: formata o código (aspas, espaços, quebras de linha) no padrão do projeto |
-| `npm run format:check` | Só confere, sem alterar (é o que o CI roda) |
-| `npm run lint` | **ESLint**: aponta erros prováveis (variável não usada, `any`, regras do React) |
-| `npm test` / `npm run test:e2e` | Testes do frontend (Vitest) / da API (ponta a ponta) |
+| Comando                         | O que faz                                                                              |
+| ------------------------------- | -------------------------------------------------------------------------------------- |
+| `npm run format`                | **Prettier**: formata o código (aspas, espaços, quebras de linha) no padrão do projeto |
+| `npm run format:check`          | Só confere, sem alterar (é o que o CI roda)                                            |
+| `npm run lint`                  | **ESLint**: aponta erros prováveis (variável não usada, `any`, regras do React)        |
+| `npm test` / `npm run test:e2e` | Testes do frontend (Vitest) / da API (ponta a ponta)                                   |
 
 Dica: rode `npm run format` antes de cada commit e o CI nunca vai reclamar de
 formatação. Os arquivos `.editorconfig` e `.gitattributes` deixam indentação e
@@ -251,10 +251,10 @@ fim de linha iguais em todas as máquinas (inclusive no Windows).
 **GitHub Actions** (`.github/workflows/ci.yml`) roda a cada push, em qualquer
 branch, e mostra ✔ ou ✖ ao lado do commit:
 
-| Job | O que confere |
-| --- | --- |
-| Backend | formatação, lint, compilação, e os 60 testes da API contra um PostgreSQL criado pelos scripts de `database/init/` |
-| Frontend | formatação, lint, testes unitários e build |
+| Job            | O que confere                                                                                                                                                                    |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend        | formatação, lint, compilação, e os 60 testes da API contra um PostgreSQL criado pelos scripts de `database/init/`                                                                |
+| Frontend       | formatação, lint, testes unitários e build                                                                                                                                       |
 | Docker Compose | `docker compose up` do zero (com senha de banco cheia de caracteres especiais), espera ficar `healthy`, confere que as telas são servidas e roda os 60 testes contra o container |
 
 Quando um passo falha, a aba **Actions** mostra qual e por quê; o comando do
@@ -274,10 +274,12 @@ com as seções e a lista de conferência.
 - ✅ Backend completo: todos os cadastros, pedido (itens, adicionais,
   pagamentos, entrega, avaliação, histórico de status) e relatórios;
 - ✅ Autenticação, autorização por cargo e testes automatizados;
-- ✅ Base do frontend: cliente da API, login, rotas protegidas por cargo,
-  formatadores, tema em CSS; servido pelo backend no Docker;
+- ✅ Frontend com o design system Sabor & Cia (tema claro e escuro): as 14
+  telas do protótipo (login, início, novo pedido, item, fechamento, pedidos,
+  detalhe, cozinha, entregas, mesas, clientes, cardápio, estoque,
+  relatórios) e as que faltavam (equipe, ajustes, histórico do entregador,
+  perfil); servido pelo backend no Docker;
 - ✅ CI no GitHub Actions (lint, formatação, testes, Docker Compose);
-- 🚧 Telas do sistema: em construção a partir do protótipo.
 
 ## Autenticação e permissões
 
@@ -304,12 +306,12 @@ curl http://localhost:3000/api/produtos -H "Authorization: Bearer eyJ..."
   (`/funcionarios/:id/cargos`), relidos a cada requisição — desativar alguém
   ou encerrar um cargo vale na hora.
 
-| Ação | Quem pode |
-| --- | --- |
-| Consultar qualquer cadastro (`GET`) | qualquer funcionário logado |
-| Registrar e operar pedidos; cadastrar e editar clientes | qualquer funcionário logado |
-| Criar, alterar ou remover cadastros (cardápio, estoque, equipe, mesas, cupons...) | gerente |
-| Relatórios | gerente |
+| Ação                                                                              | Quem pode                   |
+| --------------------------------------------------------------------------------- | --------------------------- |
+| Consultar qualquer cadastro (`GET`)                                               | qualquer funcionário logado |
+| Registrar e operar pedidos; cadastrar e editar clientes                           | qualquer funcionário logado |
+| Criar, alterar ou remover cadastros (cardápio, estoque, equipe, mesas, cupons...) | gerente                     |
+| Relatórios                                                                        | gerente                     |
 
 Respostas de erro de acesso: `401` (sem login, token inválido ou expirado),
 `403` (logado, mas sem o cargo necessário), `429` (muitas requisições).
@@ -330,22 +332,22 @@ página) e respondem sempre no mesmo formato:
 As sub-listas (variações, ficha técnica, cargos de um funcionário) são
 pequenas por natureza e voltam como lista simples.
 
-| Área | Recurso | Observações |
-| --- | --- | --- |
-| — | `GET /api/health` | Público. `200` se a API e o banco respondem; `503` se o banco está fora |
-| Acesso | `/auth` | `POST /login`, `GET /me` (quem sou eu e meus cargos), `PATCH /senha` (trocar a própria senha) |
-| Cadastros | `/clientes` | `?busca=` (nome, telefone ou e-mail). Cada cliente da lista traz `totalPedidos` e `ultimoPedidoEm`; o detalhe traz `resumo` (`totalPedidos`, `totalGasto`, `ticketMedio`, `notaMedia`). `GET /clientes/:id/pedidos` — histórico de pedidos do cliente |
-| Cadastros | `/funcionarios` | Filtros `?ativo=` e `?cargo=entregador`; aceita `login`/`senha` (`login: null` remove o acesso). Sub-rota `/funcionarios/:funcionarioId/cargos`: `POST` abre vínculo, `GET` histórico, `PATCH /:vinculoId` encerra |
-| Cadastros | `/cargos`, `/mesas`, `/formas-pagamento` | `/mesas?ativa=`; cada mesa traz `pedidoAberto` (pedido de hoje ainda em andamento ou com saldo a pagar; `null` = livre). Os quatro cargos-base não podem ser alterados |
-| Cardápio | `/categorias` | — |
-| Cardápio | `/adicionais` | Corpo traz `categoriaIds` (categorias em que é oferecido, mínimo 1; no `PATCH` substitui a lista). Filtros `?ativo=`, `?categoriaId=` e `?itemVendavelId=` (adicionais que cabem num produto ou combo) |
-| Cardápio | `/produtos` | Filtros `?ativo=`, `?categoriaId=` e `?busca=`. Cada produto traz `precoVigente` (com a melhor promoção do dia), `promocaoVigente` e `totalVariacoes`. Sub-rotas `/produtos/:produtoId/variacoes` (`POST`, `GET`, `PATCH /:variacaoId`, `DELETE /:variacaoId`) e `/produtos/:produtoId/ingredientes` — ficha técnica (`GET`, `PUT /:ingredienteId`, `DELETE /:ingredienteId`) |
-| Cardápio | `/combos` | Corpo traz `itens: [{ produtoId, quantidade }]` (mínimo de 2 produtos); `?ativo=` |
-| Cardápio | `/promocoes` | Corpo traz `produtoIds`; `GET /promocoes?ativaEm=AAAA-MM-DD` |
-| Cardápio | `/cupons` | Código normalizado em maiúsculas |
-| Estoque | `/fornecedores`, `/ingredientes` | `/ingredientes?fornecedorId=&busca=&ordem=nome\|estoque` (estoque = menor primeiro); cada ingrediente traz `usadoEm` (nº de produtos) e o detalhe, `produtos`. Fornecedores trazem `totalIngredientes` e `ingredientesPrevia` |
-| Operação | `/pedidos` | `POST /`, `POST /simulacao` (mesmo corpo; devolve itens precificados e totais sem gravar), `GET /` (filtros `status` — aceita vários, separados por vírgula —, `clienteId`, `mesaId`, `atendenteId`, `entregadorId`, `tipoAtendimento`, `busca` — número do pedido ou nome/telefone do cliente —, `dataInicio`, `dataFim`, `ordem=recentes\|antigos`), `GET /:id`, `POST /:id/status`, `POST /:id/pagamentos`, `PATCH /:id/entrega` (define o entregador), `POST /:id/avaliacao` |
-| Operação | `/relatorios` | `GET /mais-vendidos`, `GET /consumo-ingredientes`, `GET /vendas-por-atendente` — todos com `?dataInicio=AAAA-MM-DD&dataFim=AAAA-MM-DD` |
+| Área      | Recurso                                  | Observações                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| —         | `GET /api/health`                        | Público. `200` se a API e o banco respondem; `503` se o banco está fora                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Acesso    | `/auth`                                  | `POST /login`, `GET /me` (quem sou eu e meus cargos), `PATCH /senha` (trocar a própria senha)                                                                                                                                                                                                                                                                                                                                                                                    |
+| Cadastros | `/clientes`                              | `?busca=` (nome, telefone ou e-mail). Cada cliente da lista traz `totalPedidos` e `ultimoPedidoEm`; o detalhe traz `resumo` (`totalPedidos`, `totalGasto`, `ticketMedio`, `notaMedia`). `GET /clientes/:id/pedidos` — histórico de pedidos do cliente                                                                                                                                                                                                                            |
+| Cadastros | `/funcionarios`                          | Filtros `?ativo=` e `?cargo=entregador`; aceita `login`/`senha` (`login: null` remove o acesso). Sub-rota `/funcionarios/:funcionarioId/cargos`: `POST` abre vínculo, `GET` histórico, `PATCH /:vinculoId` encerra                                                                                                                                                                                                                                                               |
+| Cadastros | `/cargos`, `/mesas`, `/formas-pagamento` | `/mesas?ativa=`; cada mesa traz `pedidoAberto` (pedido de hoje ainda em andamento ou com saldo a pagar; `null` = livre). Os quatro cargos-base não podem ser alterados                                                                                                                                                                                                                                                                                                           |
+| Cardápio  | `/categorias`                            | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Cardápio  | `/adicionais`                            | Corpo traz `categoriaIds` (categorias em que é oferecido, mínimo 1; no `PATCH` substitui a lista). Filtros `?ativo=`, `?categoriaId=` e `?itemVendavelId=` (adicionais que cabem num produto ou combo)                                                                                                                                                                                                                                                                           |
+| Cardápio  | `/produtos`                              | Filtros `?ativo=`, `?categoriaId=` e `?busca=`. Cada produto traz `precoVigente` (com a melhor promoção do dia), `promocaoVigente` e `totalVariacoes`. Sub-rotas `/produtos/:produtoId/variacoes` (`POST`, `GET`, `PATCH /:variacaoId`, `DELETE /:variacaoId`) e `/produtos/:produtoId/ingredientes` — ficha técnica (`GET`, `PUT /:ingredienteId`, `DELETE /:ingredienteId`)                                                                                                    |
+| Cardápio  | `/combos`                                | Corpo traz `itens: [{ produtoId, quantidade }]` (mínimo de 2 produtos); `?ativo=`                                                                                                                                                                                                                                                                                                                                                                                                |
+| Cardápio  | `/promocoes`                             | Corpo traz `produtoIds`; `GET /promocoes?ativaEm=AAAA-MM-DD`                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Cardápio  | `/cupons`                                | Código normalizado em maiúsculas                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Estoque   | `/fornecedores`, `/ingredientes`         | `/ingredientes?fornecedorId=&busca=&ordem=nome\|estoque` (estoque = menor primeiro); cada ingrediente traz `usadoEm` (nº de produtos) e o detalhe, `produtos`. Fornecedores trazem `totalIngredientes` e `ingredientesPrevia`                                                                                                                                                                                                                                                    |
+| Operação  | `/pedidos`                               | `POST /`, `POST /simulacao` (mesmo corpo; devolve itens precificados e totais sem gravar), `GET /` (filtros `status` — aceita vários, separados por vírgula —, `clienteId`, `mesaId`, `atendenteId`, `entregadorId`, `tipoAtendimento`, `busca` — número do pedido ou nome/telefone do cliente —, `dataInicio`, `dataFim`, `ordem=recentes\|antigos`), `GET /:id`, `POST /:id/status`, `POST /:id/pagamentos`, `PATCH /:id/entrega` (define o entregador), `POST /:id/avaliacao` |
+| Operação  | `/relatorios`                            | `GET /mais-vendidos`, `GET /consumo-ingredientes`, `GET /vendas-por-atendente` — todos com `?dataInicio=AAAA-MM-DD&dataFim=AAAA-MM-DD`                                                                                                                                                                                                                                                                                                                                           |
 
 ### Exemplo: registrar um pedido
 
@@ -447,5 +449,8 @@ frente da API; e o contador de limite de requisições fica na memória de um
 
 ## Próximos incrementos sugeridos
 
-- telas do sistema conforme o protótipo: login, cadastros, novo pedido,
-  painel de pedidos, relatórios.
+- estoque mínimo por ingrediente (alerta de falta no Estoque);
+- fotos dos produtos no cardápio;
+- atualização em tempo real (WebSocket) na cozinha, no lugar da consulta a
+  cada 10 s;
+- baixa automática do estoque pela ficha técnica ao concluir o pedido.

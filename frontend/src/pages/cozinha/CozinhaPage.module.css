@@ -1,0 +1,58 @@
+.tela {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 560px;
+}
+.cabecalho {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px 24px 16px;
+}
+.colunas {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  padding: 0 24px 24px;
+}
+.coluna {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-300);
+}
+.comanda {
+  flex: none;
+}
+.destaque {
+  box-shadow: var(--shadow-pop);
+}
+.cabecaComanda {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 16px 6px;
+}
+/* Tablet em pé ou celular: as colunas viram uma lista só. */
+@media (max-width: 900px) {
+  .tela {
+    height: auto;
+  }
+  .colunas {
+    grid-template-columns: 1fr;
+  }
+  .coluna {
+    overflow: visible;
+  }
+}

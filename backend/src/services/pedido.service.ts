@@ -49,6 +49,8 @@ type PedidoCompleto = Prisma.PedidoGetPayload<{
 }>;
 
 const moeda = (valor: Decimal) => valor.toFixed(2);
+// Para mensagens de erro lidas pelo usuário: "R$ 93,93".
+const reais = (valor: Decimal) => `R$ ${valor.toFixed(2).replace(".", ",")}`;
 
 // Adicionais são cobrados por unidade do item: 2 lanches com bacon extra
 // pagam 2 vezes o bacon.
@@ -577,7 +579,7 @@ async function prepararPedido(
     if (totalPago.greaterThan(total)) {
       throw new AppError(
         409,
-        `A soma dos pagamentos (R$ ${moeda(totalPago)}) passa do total do pedido (R$ ${moeda(total)}).`,
+        `A soma dos pagamentos (${reais(totalPago)}) passa do total do pedido (${reais(total)}).`,
       );
     }
   }
@@ -890,7 +892,7 @@ export async function adicionarPagamento(id: number, dados: PagamentoDTO) {
     if (new Prisma.Decimal(dados.valorPago).greaterThan(saldo)) {
       throw new AppError(
         409,
-        `Valor maior que o saldo em aberto do pedido (R$ ${moeda(saldo)}).`,
+        `Valor maior que o saldo em aberto do pedido (${reais(saldo)}).`,
       );
     }
 

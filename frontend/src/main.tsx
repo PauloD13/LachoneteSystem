@@ -14,6 +14,7 @@ import "./index.css";
 import { aplicarTemaSalvo } from "./lib/tema";
 import App from "./App.tsx";
 import { AuthProvider } from "./contexts/AuthProvider";
+import { AvisosProvider } from "./contexts/AvisosProvider";
 
 // Antes de desenhar qualquer coisa, para a tela já nascer no tema certo.
 aplicarTemaSalvo();
@@ -21,9 +22,11 @@ aplicarTemaSalvo();
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <AvisosProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </AvisosProvider>
     </BrowserRouter>
   </StrictMode>,
 );
