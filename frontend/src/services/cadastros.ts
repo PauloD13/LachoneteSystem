@@ -10,8 +10,9 @@ import type {
   AdicionalEntrada,
   Cargo,
   Categoria,
-  Cliente,
+  ClienteDetalhado,
   ClienteEntrada,
+  ClienteResumido,
   Combo,
   ComboEntrada,
   Cupom,
@@ -19,12 +20,14 @@ import type {
   FormaPagamento,
   Fornecedor,
   FornecedorEntrada,
+  FornecedorResumido,
   Funcionario,
   FuncionarioEntrada,
   Ingrediente,
   IngredienteEntrada,
   ItemFichaTecnica,
   Mesa,
+  MesaComPedido,
   Produto,
   ProdutoEntrada,
   Promocao,
@@ -37,9 +40,10 @@ import type {
 type ComAtivo = ConsultaPaginada & { ativo?: boolean };
 
 export const clientes = criarRecurso<
-  Cliente,
+  ClienteResumido,
   ClienteEntrada,
-  ConsultaPaginada & { busca?: string }
+  ConsultaPaginada & { busca?: string },
+  ClienteDetalhado
 >("/clientes");
 
 export const funcionarios = criarRecurso<
@@ -50,9 +54,10 @@ export const funcionarios = criarRecurso<
 
 export const cargos = criarRecurso<Cargo, { nome: string }>("/cargos");
 export const mesas = criarRecurso<
-  Mesa,
+  MesaComPedido,
   { numero: number; ativa?: boolean },
-  ConsultaPaginada & { ativa?: boolean }
+  ConsultaPaginada & { ativa?: boolean },
+  Mesa
 >("/mesas");
 export const formasPagamento = criarRecurso<FormaPagamento, { nome: string }>(
   "/formas-pagamento",
@@ -64,12 +69,14 @@ export const categorias = criarRecurso<Categoria, { nome: string }>(
 export const produtos = criarRecurso<
   Produto,
   ProdutoEntrada,
-  ComAtivo & { categoriaId?: number }
+  ComAtivo & { categoriaId?: number; busca?: string }
 >("/produtos");
 export const combos = criarRecurso<Combo, ComboEntrada, ComAtivo>("/combos");
-export const adicionais = criarRecurso<Adicional, AdicionalEntrada, ComAtivo>(
-  "/adicionais",
-);
+export const adicionais = criarRecurso<
+  Adicional,
+  AdicionalEntrada,
+  ComAtivo & { categoriaId?: number; itemVendavelId?: number }
+>("/adicionais");
 export const promocoes = criarRecurso<
   Promocao,
   PromocaoEntrada,
@@ -77,13 +84,21 @@ export const promocoes = criarRecurso<
 >("/promocoes");
 export const cupons = criarRecurso<Cupom, CupomEntrada>("/cupons");
 
-export const fornecedores = criarRecurso<Fornecedor, FornecedorEntrada>(
-  "/fornecedores",
-);
+export const fornecedores = criarRecurso<
+  FornecedorResumido,
+  FornecedorEntrada,
+  ConsultaPaginada,
+  Fornecedor & { ingredientes: Ingrediente[] }
+>("/fornecedores");
 export const ingredientes = criarRecurso<
   Ingrediente,
   IngredienteEntrada,
-  ConsultaPaginada & { fornecedorId?: number }
+  ConsultaPaginada & {
+    fornecedorId?: number;
+    busca?: string;
+    /** estoque = menor estoque primeiro. */
+    ordem?: "nome" | "estoque";
+  }
 >("/ingredientes");
 
 // --- Sub-recursos (listas pequenas, sem paginação) -----------------------------

@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma.js";
 import { paginar, recorte } from "../lib/paginacao.js";
 import { removerOuExplicar } from "../lib/remocao.js";
+import { abertosPorMesa } from "./pedido.service.js";
 import type {
   CriarMesaDTO,
   AtualizarMesaDTO,
@@ -21,7 +22,16 @@ export async function listar({ ativa, ...pagina }: ListarMesasQuery) {
     }),
     prisma.mesa.count({ where }),
   ]);
-  return paginar(dados, total, pagina);
+  // Cada mesa sai com o pedido em aberto (ou null = livre).
+  const abertos = await abertosPorMesa(dados.map((m) => m.id));
+  return paginar(
+    dados.map((mesa) => ({
+      ...mesa,
+      pedidoAberto: abertos.get(mesa.id) ?? null,
+    })),
+    total,
+    pagina,
+  );
 }
 
 export async function buscarPorId(id: number) {

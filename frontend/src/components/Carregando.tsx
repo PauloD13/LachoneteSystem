@@ -1,8 +1,18 @@
-/** Indicador de carregamento acessível (leitores de tela anunciam o texto). */
+/** Carregamento de tela inteira (ex.: conferindo a sessão ao abrir). */
 export function Carregando({ texto = "Carregando…" }: { texto?: string }) {
   return (
-    <p role="status" aria-live="polite" className="carregando">
+    <div
+      role="status"
+      aria-live="polite"
+      className="ui-vazio"
+      style={{ minHeight: "60dvh", justifyContent: "center" }}
+    >
+      <span
+        className="sc-spinner"
+        aria-hidden="true"
+        style={{ color: "var(--brand)" }}
+      />
       {texto}
-    </p>
+    </div>
   );
 }

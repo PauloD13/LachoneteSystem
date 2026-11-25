@@ -40,6 +40,25 @@ export interface Cliente {
   criadoEm: Instante;
 }
 
+/** Cliente na listagem: com contadores de consumo. */
+export interface ClienteResumido extends Cliente {
+  /** Pedidos não cancelados. */
+  totalPedidos: number;
+  ultimoPedidoEm: Instante | null;
+}
+
+/** Cliente no detalhe (GET /clientes/:id): com o resumo de consumo. */
+export interface ClienteDetalhado extends Cliente {
+  resumo: {
+    totalPedidos: number;
+    totalGasto: Dinheiro;
+    /** `null` enquanto não há pedidos. */
+    ticketMedio: Dinheiro | null;
+    /** Ex.: "4.5"; `null` sem avaliações. */
+    notaMedia: Decimal | null;
+  };
+}
+
 export type ClienteEntrada = Omit<Cliente, "id" | "criadoEm">;
 
 export interface Funcionario {
@@ -84,6 +103,19 @@ export interface Mesa {
   ativa: boolean;
 }
 
+/** Mesa na listagem: com o pedido em aberto (`null` = livre). */
+export interface MesaComPedido extends Mesa {
+  pedidoAberto: {
+    id: number;
+    dataHora: Instante;
+    statusAtual: StatusPedido;
+    cliente: { id: number; nome: string; telefone: string } | null;
+    totalItens: number;
+    total: Dinheiro;
+    saldo: Dinheiro;
+  } | null;
+}
+
 export interface FormaPagamento {
   id: number;
   nome: string;
@@ -104,6 +136,10 @@ export interface Produto {
   categoriaId: number;
   categoriaNome: string;
   descricao: string | null;
+  /** Preço de hoje, com a melhor promoção vigente (igual ao do pedido). */
+  precoVigente: Dinheiro;
+  promocaoVigente: { id: number; nome: string; dataFim: Dia } | null;
+  totalVariacoes: number;
 }
 
 export interface ProdutoEntrada {
@@ -163,12 +199,16 @@ export interface Adicional {
   nome: string;
   preco: Dinheiro;
   ativo: boolean;
+  /** Categorias do cardápio em que é oferecido. */
+  categorias: Categoria[];
 }
 
 export interface AdicionalEntrada {
   nome: string;
   preco: number;
   ativo?: boolean;
+  /** Pelo menos uma; no PATCH substitui a lista inteira. */
+  categoriaIds: number[];
 }
 
 export type TipoDesconto = "VALOR" | "PERCENTUAL";
@@ -222,6 +262,13 @@ export interface Fornecedor {
   email: string | null;
 }
 
+/** Fornecedor na listagem: quantos ingredientes abastece. */
+export interface FornecedorResumido extends Fornecedor {
+  totalIngredientes: number;
+  /** Até 3 nomes, em ordem alfabética. */
+  ingredientesPrevia: string[];
+}
+
 export type FornecedorEntrada = Omit<Fornecedor, "id">;
 
 export type UnidadeMedida = "kg" | "litro" | "unidade";
@@ -233,6 +280,10 @@ export interface Ingrediente {
   unidadeMedida: UnidadeMedida;
   fornecedorId: number;
   fornecedor: { id: number; nome: string };
+  /** Em quantos produtos (fichas técnicas) é usado — só na listagem. */
+  usadoEm?: number;
+  /** Produtos que o usam — só no detalhe. */
+  produtos?: { id: number; nome: string; quantidadeUtilizada: Decimal }[];
 }
 
 export interface IngredienteEntrada {
@@ -348,6 +399,14 @@ export interface NovoPedido {
     endereco?: Endereco;
   } | null;
   pagamentos?: { formaPagamentoId: number; valorPago: number }[];
+}
+
+/** Resposta de POST /pedidos/simulacao: o pedido calculado, sem gravar. */
+export interface PedidoSimulado {
+  tipoAtendimento: TipoAtendimento;
+  itens: Omit<ItemDoPedido, "id">[];
+  cupom: Pedido["cupom"];
+  totais: Omit<Pedido["totais"], "totalEstornado">;
 }
 
 // --- Relatórios ---------------------------------------------------------------

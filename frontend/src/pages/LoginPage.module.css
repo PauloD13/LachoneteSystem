@@ -1,32 +1,64 @@
-/* PROVISÓRIO: será substituído pelo visual do protótipo. */
 .pagina {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: var(--espaco-5);
-}
-
-.cartao {
-  width: min(100%, 22rem);
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--espaco-2);
-  padding: var(--espaco-6);
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
+  justify-content: flex-end;
+  min-height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  overflow: hidden;
 }
-
-.cartao h1 {
-  font-size: 1.25rem;
-  margin: 0 0 var(--espaco-3);
+.enfeite {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  max-width: 480px;
+  height: auto;
 }
-
-.cartao button {
-  margin-top: var(--espaco-3);
+.conteudo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 200px 24px 40px;
 }
-
-.erro {
+.marca {
   margin: 0;
-  color: var(--cor-erro);
+  font: 600 52px/54px var(--font-display);
+}
+.cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: var(--surface-200);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+}
+.senha {
+  position: relative;
+  display: block;
+}
+.senha input {
+  padding-right: 56px;
+}
+.olho {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.dica {
+  margin: 0;
+  text-align: center;
 }

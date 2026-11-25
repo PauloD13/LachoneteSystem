@@ -40,6 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const sair = useCallback(() => {
     salvarToken(null);
+    // O pedido em montagem (CarrinhoProvider) não passa para o próximo usuário.
+    try {
+      sessionStorage.removeItem("lsc.carrinho");
+    } catch {
+      // sem armazenamento: nada a limpar
+    }
     setUsuario(null);
   }, []);
 
@@ -74,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const resposta = await auth.login(login, senha);
     salvarToken(resposta.token);
     setUsuario(resposta.funcionario);
+    return resposta.funcionario;
   }, []);
 
   const valor = useMemo<ValorDaAutenticacao>(

@@ -9,23 +9,36 @@ import type { ConsultaPaginada, Paginado } from "../types/api";
 type Consulta = ConsultaPaginada &
   Record<string, string | number | boolean | null | undefined>;
 
-export interface Recurso<T, Entrada, Filtros extends Consulta = Consulta> {
+/**
+ * T = item da listagem; Detalhe = o que GET /:id devolve (por padrão, o
+ * mesmo T — alguns recursos trazem mais coisa no detalhe, como o resumo do
+ * cliente).
+ */
+export interface Recurso<
+  T,
+  Entrada,
+  Filtros extends Consulta = Consulta,
+  Detalhe = T,
+> {
   listar(filtros?: Filtros, sinal?: AbortSignal): Promise<Paginado<T>>;
-  buscar(id: number, sinal?: AbortSignal): Promise<T>;
-  criar(dados: Entrada): Promise<T>;
-  atualizar(id: number, dados: Partial<Entrada>): Promise<T>;
+  buscar(id: number, sinal?: AbortSignal): Promise<Detalhe>;
+  criar(dados: Entrada): Promise<Detalhe>;
+  atualizar(id: number, dados: Partial<Entrada>): Promise<Detalhe>;
   remover(id: number): Promise<void>;
 }
 
-export function criarRecurso<T, Entrada, Filtros extends Consulta = Consulta>(
-  caminho: string,
-): Recurso<T, Entrada, Filtros> {
+export function criarRecurso<
+  T,
+  Entrada,
+  Filtros extends Consulta = Consulta,
+  Detalhe = T,
+>(caminho: string): Recurso<T, Entrada, Filtros, Detalhe> {
   return {
     listar: (filtros, sinal) =>
       api.get<Paginado<T>>(caminho, { consulta: filtros, sinal }),
-    buscar: (id, sinal) => api.get<T>(`${caminho}/${id}`, { sinal }),
-    criar: (dados) => api.post<T>(caminho, dados),
-    atualizar: (id, dados) => api.patch<T>(`${caminho}/${id}`, dados),
+    buscar: (id, sinal) => api.get<Detalhe>(`${caminho}/${id}`, { sinal }),
+    criar: (dados) => api.post<Detalhe>(caminho, dados),
+    atualizar: (id, dados) => api.patch<Detalhe>(`${caminho}/${id}`, dados),
     remover: (id) => api.delete(`${caminho}/${id}`),
   };
 }

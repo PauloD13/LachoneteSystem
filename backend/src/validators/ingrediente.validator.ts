@@ -23,6 +23,11 @@ export const atualizarIngredienteSchema = criarIngredienteSchema.partial();
 
 export const listarIngredientesQuerySchema = paginacaoQuerySchema.extend({
   fornecedorId: idNaUrl.optional(),
+  busca: z.string().trim().min(1).max(100).optional(),
+  // nome (padrão) ou estoque (menor estoque primeiro).
+  ordem: z
+    .enum(["nome", "estoque"], { error: "ordem deve ser nome ou estoque." })
+    .default("nome"),
 });
 
 export type CriarIngredienteDTO = z.infer<typeof criarIngredienteSchema>;

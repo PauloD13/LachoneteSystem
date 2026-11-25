@@ -53,7 +53,8 @@ model Categoria {
   id   Int    @id @default(autoincrement())
   nome String @unique @db.VarChar(50)
 
-  produtos Produto[]
+  produtos   Produto[]
+  adicionais AdicionalCategoria[]
 
   @@map("categoria")
 }
@@ -133,8 +134,22 @@ model Adicional {
   ativo Boolean @default(true)
 
   itensPedidoAdicional ItemPedidoAdicional[]
+  categorias           AdicionalCategoria[]
 
   @@map("adicional")
+}
+
+/// Associativa N:N — em quais categorias cada adicional pode ser oferecido.
+model AdicionalCategoria {
+  id          Int @id @default(autoincrement())
+  adicionalId Int @map("adicional_id")
+  categoriaId Int @map("categoria_id")
+
+  adicional Adicional @relation(fields: [adicionalId], references: [id], onDelete: Cascade)
+  categoria Categoria @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+
+  @@unique([adicionalId, categoriaId])
+  @@map("adicional_categoria")
 }
 
 model Fornecedor {

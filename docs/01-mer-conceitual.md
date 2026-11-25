@@ -42,6 +42,7 @@ associativas resolvem relacionamentos N:N que carregam atributos próprios.
 | ProdutoIngrediente | Associativa | Produto + Ingrediente | "Ficha técnica": quantidade de cada ingrediente usada por produto — é o dado que permite estimar consumo de estoque |
 | ComboItem | Associativa | Combo + Produto | Um combo reúne 2+ produtos; a associação define quais e em que quantidade |
 | ProdutoPromocao | Associativa | Produto + Promocao | Um produto pode participar de várias promoções ao longo do tempo; precisa manter histórico mesmo após encerradas |
+| AdicionalCategoria | Associativa | Adicional + Categoria | Define em quais categorias do cardápio cada adicional é oferecido ("bacon extra" vale para Lanches, não para Bebidas). Num combo valem as categorias dos produtos que o compõem |
 
 ## 3. Relacionamentos e cardinalidades (visão preliminar)
 
@@ -56,7 +57,7 @@ associativas resolvem relacionamentos N:N que carregam atributos próprios.
 | Combo — Produto | N:N (via ComboItem) | Total do lado Combo | Combo sem produto não existe |
 | Produto — Ingrediente | N:N (via ProdutoIngrediente) | Total do lado Produto | Todo produto do cardápio tem ficha técnica |
 | Ingrediente — Fornecedor | N:1 | Total do lado Ingrediente | Cada ingrediente tem um fornecedor responsável (ver decisão 2) |
-| Pedido — FormaPagamento | N:N (via PedidoPagamento) | Total | Todo pedido precisa de ao menos uma forma de pagamento registrada |
+| Pedido — FormaPagamento | N:N (via PedidoPagamento) | Parcial | Um pedido pode ser pago com várias formas. O pagamento pode ser registrado junto com o pedido ou depois (ex.: na mesa, ao fim da refeição); o saldo em aberto aparece nos totais do pedido |
 | Pedido — Cupom | N:1 | Parcial | Cupom é opcional |
 | Pedido — StatusPedidoHistorico | 1:N | Total | Todo pedido tem ao menos o status inicial "recebido" |
 | Pedido — Entrega | 1:1 | Parcial (só delivery) | — |
@@ -64,6 +65,7 @@ associativas resolvem relacionamentos N:N que carregam atributos próprios.
 | Funcionario — Cargo | N:N (via FuncionarioCargo) | Total do lado Funcionario | Todo funcionário tem ao menos um cargo registrado |
 | Produto — Promocao | N:N (via ProdutoPromocao) | Parcial | Nem todo produto está em promoção |
 | ItemPedido — Adicional | N:N (via ItemPedidoAdicional) | Parcial | Adicional é opcional |
+| Adicional — Categoria | N:N (via AdicionalCategoria) | Total do lado Adicional | Todo adicional é oferecido em ao menos uma categoria; o pedido recusa adicional fora das categorias do item |
 | Produto — Variacao | 1:N | Parcial | Nem todo produto tem variação |
 
 ## 4. Decisões de modelagem (CONFIRMADAS)

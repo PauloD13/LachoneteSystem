@@ -2,6 +2,8 @@ import { Prisma } from "@prisma/client";
 import { prisma, type Tx } from "../lib/prisma.js";
 import { AppError } from "../lib/appError.js";
 import { paginar, recorte } from "../lib/paginacao.js";
+import { hojeComoData } from "../lib/datas.js";
+import { melhorPreco } from "../lib/precos.js";
 import { removerOuExplicar } from "../lib/remocao.js";
 import type {
   CriarProdutoDTO,
@@ -11,19 +13,35 @@ import type {
 
 const TIPO_PRODUTO = "PRODUTO";
 
-const comRelacoes = {
-  itemVendavel: true,
-  categoria: true,
-} satisfies Prisma.ProdutoInclude;
+// Além do cadastro, cada produto sai com o preço do DIA (melhor promoção
+// vigente, a mesma conta do registro de pedido) e quantas variações tem —
+// a tela de pedido usa isso para decidir se o "+" já adiciona o item ou se
+// precisa abrir a escolha de variação.
+function comRelacoes(hoje: Date) {
+  return {
+    itemVendavel: true,
+    categoria: true,
+    _count: { select: { variacoes: true } },
+    produtoPromocoes: {
+      where: {
+        promocao: { dataInicio: { lte: hoje }, dataFim: { gte: hoje } },
+      },
+      include: { promocao: true },
+    },
+  } satisfies Prisma.ProdutoInclude;
+}
 
 // Formato devolvido pela API: "achatado", escondendo do consumidor que por
-// dentro existem duas tabelas (item_vendavel + produto). Documentado como
-// decisão de design — ver explicação enviada ao usuário.
+// dentro existem duas tabelas (item_vendavel + produto).
 type ProdutoComRelacoes = Prisma.ProdutoGetPayload<{
-  include: typeof comRelacoes;
+  include: ReturnType<typeof comRelacoes>;
 }>;
 
 function achatar(produto: ProdutoComRelacoes) {
+  const vigente = melhorPreco(
+    produto.itemVendavel.preco,
+    produto.produtoPromocoes.map((pp) => pp.promocao),
+  );
   return {
     id: produto.id,
     nome: produto.itemVendavel.nome,
@@ -32,6 +50,13 @@ function achatar(produto: ProdutoComRelacoes) {
     categoriaId: produto.categoriaId,
     categoriaNome: produto.categoria.nome,
     descricao: produto.descricao,
+    precoVigente: vigente.preco.toFixed(2),
+    promocaoVigente: vigente.promocao && {
+      id: vigente.promocao.id,
+      nome: vigente.promocao.nome,
+      dataFim: vigente.promocao.dataFim,
+    },
+    totalVariacoes: produto._count.variacoes,
   };
 }
 
@@ -69,7 +94,7 @@ export async function criar(dados: CriarProdutoDTO) {
     // formato achatado de uma vez.
     return tx.produto.findUniqueOrThrow({
       where: { id: itemVendavel.id },
-      include: comRelacoes,
+      include: comRelacoes(hojeComoData()),
     });
   });
 
@@ -79,17 +104,21 @@ export async function criar(dados: CriarProdutoDTO) {
 export async function listar({
   ativo,
   categoriaId,
+  busca,
   ...pagina
 }: ListarProdutosQuery) {
   const where: Prisma.ProdutoWhereInput = {
     ...(categoriaId === undefined ? {} : { categoriaId }),
-    ...(ativo === undefined ? {} : { itemVendavel: { ativo } }),
+    itemVendavel: {
+      ...(ativo === undefined ? {} : { ativo }),
+      ...(busca ? { nome: { contains: busca, mode: "insensitive" } } : {}),
+    },
   };
 
   const [produtos, total] = await prisma.$transaction([
     prisma.produto.findMany({
       where,
-      include: comRelacoes,
+      include: comRelacoes(hojeComoData()),
       orderBy: { id: "asc" },
       ...recorte(pagina),
     }),
@@ -102,7 +131,7 @@ export async function listar({
 export async function buscarPorId(id: number) {
   const produto = await prisma.produto.findUniqueOrThrow({
     where: { id },
-    include: comRelacoes,
+    include: comRelacoes(hojeComoData()),
   });
 
   return achatar(produto);
@@ -133,7 +162,7 @@ export async function atualizar(id: number, dados: AtualizarProdutoDTO) {
 
     return tx.produto.findUniqueOrThrow({
       where: { id },
-      include: comRelacoes,
+      include: comRelacoes(hojeComoData()),
     });
   });
 

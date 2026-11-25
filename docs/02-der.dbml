@@ -89,6 +89,18 @@ Table adicional {
   ativo boolean [not null, default: true]
 }
 
+// Em quais categorias cada adicional é oferecido (N:N).
+Table adicional_categoria {
+  id integer [pk, increment]
+  adicional_id integer [not null, ref: > adicional.id]
+  categoria_id integer [not null, ref: > categoria.id]
+
+  indexes {
+    (adicional_id, categoria_id) [unique]
+    categoria_id
+  }
+}
+
 // --- Estoque / ingredientes ---
 
 Table fornecedor {

@@ -6,8 +6,8 @@ export interface ValorDaAutenticacao {
   usuario: Usuario | null;
   /** `true` enquanto confere, ao abrir o sistema, se a sessão salva vale. */
   carregando: boolean;
-  /** Lança ErroDaApi se login/senha estiverem errados. */
-  entrar(login: string, senha: string): Promise<void>;
+  /** Devolve quem entrou; lança ErroDaApi se login/senha estiverem errados. */
+  entrar(login: string, senha: string): Promise<Usuario>;
   sair(): void;
   /** O usuário exerce HOJE algum destes cargos? */
   temCargo(...cargos: NomeDeCargo[]): boolean;

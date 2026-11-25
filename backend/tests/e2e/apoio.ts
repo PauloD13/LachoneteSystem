@@ -13,6 +13,7 @@
 // várias vezes seguidas no mesmo banco.
 
 import assert from "node:assert/strict";
+import { randomBytes } from "node:crypto";
 
 const API_URL = process.env.API_URL ?? "http://localhost:3000/api";
 const ADMIN_LOGIN = process.env.ADMIN_LOGIN ?? "admin";
@@ -88,10 +89,19 @@ export async function ok(
 }
 
 let contador = 0;
-/** Texto único por execução: evita colisão com dados de execuções anteriores. */
+// O `node --test` roda cada arquivo de teste num processo próprio, em
+// paralelo: hora + contador sozinhos repetem quando dois processos geram no
+// mesmo milissegundo (aconteceu no CI: "Este login já está em uso"). Um
+// sufixo aleatório por processo resolve.
+const DESTE_PROCESSO = randomBytes(3).toString("hex");
+
+/**
+ * Texto único por execução e por processo: evita colisão com dados de
+ * execuções anteriores e com os outros arquivos de teste rodando junto.
+ */
 export function unico(prefixo: string): string {
   contador += 1;
-  return `${prefixo}-${Date.now().toString(36)}${contador}`;
+  return `${prefixo}-${Date.now().toString(36)}-${DESTE_PROCESSO}-${contador}`;
 }
 
 /** Dia (AAAA-MM-DD) no fuso do negócio, deslocado em `dias` a partir de hoje. */

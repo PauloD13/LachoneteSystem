@@ -32,6 +32,8 @@ export const atualizarProdutoSchema = criarProdutoSchema.partial();
 
 export const listarProdutosQuerySchema = listarComAtivoQuerySchema.extend({
   categoriaId: idNaUrl.optional(),
+  // Parte do nome, sem diferenciar maiúsculas.
+  busca: z.string().trim().min(1).max(100).optional(),
 });
 
 export type CriarProdutoDTO = z.infer<typeof criarProdutoSchema>;

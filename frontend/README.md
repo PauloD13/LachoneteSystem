@@ -29,23 +29,55 @@ Login inicial: `admin` / `admin12345` (os valores de `backend/.env.example`).
 | `npm run format`    | Prettier: formata todo o código                          |
 | `npm test`          | Testes unitários (Vitest)                                |
 
+## Telas
+
+O visual segue o design system **Sabor & Cia** (`styles/tokens.css` e
+`styles/bundle.css`, classes `sc-*`). Cada pessoa cai na tela do seu cargo ao
+entrar (gerente → atendente → cozinheiro → entregador, nessa prioridade).
+
+| Rota                                    | Tela                                        | Quem       |
+| --------------------------------------- | ------------------------------------------- | ---------- |
+| `/login`                                | Login                                       | todos      |
+| `/inicio`                               | Início do turno                             | atendente  |
+| `/pedidos/novo`                         | Novo pedido (+ folha do item)               | atendente  |
+| `/pedidos/novo/fechar`                  | Fechamento                                  | atendente  |
+| `/pedidos`, `/pedidos/:id`              | Lista e detalhe do pedido                   | todos      |
+| `/mesas`                                | Mesas (livres abrem pedido)                 | atendente  |
+| `/mais`, `/perfil`                      | Atalhos, tema, trocar senha, sair           | todos      |
+| `/clientes`                             | Clientes                                    | atendente  |
+| `/cozinha`                              | Cozinha (tablet, atualiza a cada 10 s)      | cozinheiro |
+| `/entregas`, `/entregas/historico`      | Minhas entregas e histórico                 | entregador |
+| `/gerencia/pedidos`                     | Pedidos (desktop)                           | gerente    |
+| `/gerencia/clientes`                    | Clientes com ficha e histórico              | gerente    |
+| `/gerencia/cardapio`                    | Produtos, combos, categorias, adicionais... | gerente    |
+| `/gerencia/estoque`                     | Ingredientes e fornecedores                 | gerente    |
+| `/gerencia/relatorios`                  | Mais vendidos, vendas, consumo              | gerente    |
+| `/gerencia/equipe`, `/gerencia/ajustes` | Funcionários e cargos; mesas, formas...     | gerente    |
+
 ## Estrutura
 
 ```text
 src/
-├── main.tsx             # ponto de entrada: Router + AuthProvider + App
-├── App.tsx
+├── main.tsx             # ponto de entrada: Router + Avisos + Auth + App
+├── App.tsx              # carrinho (pedido em montagem) + rotas
 ├── index.css            # importa styles/ (CSS global)
 ├── styles/
-│   ├── tokens.css       # cores, espaçamentos, fontes — o "tema"
-│   └── base.css         # reset e estilo padrão dos elementos HTML
+│   ├── tokens.css       # design system: cores (claro/escuro), espaço, fontes
+│   ├── bundle.css       # design system: componentes sc-* e movimento
+│   ├── base.css         # reset dos elementos HTML
+│   └── app.css          # padrões das telas (cartão, segmentado, folha...)
 ├── routes/              # mapa de telas e proteção por login/cargo
-├── pages/               # uma tela por arquivo (+ seu .module.css)
-├── components/          # peças reutilizadas entre telas
+├── pages/               # uma tela por arquivo, por área:
+│   ├── atendente/  cozinha/  entregador/  gerencia/  conta/
+├── components/
+│   ├── ui/              # Botao, Campo, Chip, Segmentado, Folha, Abas...
+│   ├── layout/          # LayoutCelular (nav inferior), LayoutGerencia
+│   ├── pedido/          # folhas do item/cliente/mesa, cartão do pedido
+│   └── conta/           # tema e troca de senha
 ├── services/            # TODA conversa com a API
-├── hooks/               # useAuth, useConsulta
-├── contexts/            # estado global (só o login)
-├── lib/                 # formatadores e rótulos
+├── hooks/               # useAuth, useConsulta, useAcao, useAvisos...
+├── contexts/            # login, avisos (toasts) e carrinho
+├── lib/                 # formatadores, status, montagem do pedido...
 └── types/               # tipos das respostas da API
 ```
 
@@ -90,10 +122,23 @@ const { dados, carregando, erro, recarregar } = useConsulta(
 `<ExigeCargo>` nas rotas. É conforto visual — quem garante a regra é o
 backend (responde 403).
 
-**CSS próprio.** Global só em `styles/`; cada tela tem seu
-`Tela.module.css`. Toda cor e espaçamento vêm das variáveis de
-`styles/tokens.css` — para aplicar a identidade visual do protótipo, muda-se
-os valores ali.
+**CSS.** Componentes do design system pelas classes `sc-*` (ou pelos
+wrappers em `components/ui`); padrões de tela pelas classes `ui-*` de
+`styles/app.css`; o que é só de uma tela, no `.module.css` dela. Toda cor,
+espaço e raio vêm das variáveis de `styles/tokens.css` — nada de cor nova
+fora dali. O tema (claro/escuro/do aparelho) fica em `lib/tema.ts`.
+
+**Avisos e ações.** `useAvisos().sucesso("Salvo")` / `.erro(erro)` mostram
+os toasts; `useAcao()` junta "ocupado", aviso e erros por campo para os
+botões de salvar/excluir.
+
+**Status do pedido: `lib/status.ts`.** Cor (selo e listra), rótulo e a
+próxima ação de cada status ficam num lugar só.
+
+**Pedido em montagem: `useCarrinho()`.** Novo pedido, item e fechamento
+compartilham o carrinho (guardado na aba, sobrevive a recarregar). O
+fechamento pergunta o total ao backend (`POST /pedidos/simulacao`) a cada
+mudança, então o que a tela mostra é exatamente o que será cobrado.
 
 **HTML semântico.** `<header>`, `<nav>`, `<main>`, `<section>`, `<form>` com
 `<label htmlFor>` em todo campo, `<table>` para dados tabulares, mensagens de
@@ -101,10 +146,8 @@ erro com `role="alert"`.
 
 ## Adicionando uma tela
 
-1. Crie `src/pages/NomeDaTelaPage.tsx` (e `NomeDaTelaPage.module.css`).
-2. Registre a rota em `src/routes/AppRoutes.tsx`, no grupo de permissão
-   certo.
-3. Adicione o link no menu (`src/components/LayoutPrincipal.tsx`).
-
-As telas de login e início atuais são **provisórias**, só para o ambiente
-funcionar de ponta a ponta; serão refeitas conforme o protótipo.
+1. Crie `src/pages/<area>/NomeDaTelaPage.tsx`.
+2. Registre a rota em `src/routes/AppRoutes.tsx`, dentro do layout e do
+   grupo de permissão certos.
+3. Adicione o link na navegação (`components/layout/LayoutCelular.tsx` ou
+   `LayoutGerencia.tsx`).

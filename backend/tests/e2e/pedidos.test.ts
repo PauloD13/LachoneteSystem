@@ -29,6 +29,7 @@ let adicional: Json; // R$ 3,00
 let variacao: Json; // + R$ 4,00 no lanche
 let dinheiro: number;
 let pix: number;
+let categoriaId: number;
 
 before(async () => {
   admin = await gerente();
@@ -38,7 +39,7 @@ before(async () => {
     criarFuncionario("entregador"),
   ]);
   cliente = await criarCliente();
-  const categoriaId = await criarCategoria();
+  categoriaId = await criarCategoria();
   lanche = await criarProduto(categoriaId, 20);
   bebida = await criarProduto(categoriaId, 6);
   combo = await ok(201, "POST", "/combos", {
@@ -51,7 +52,7 @@ before(async () => {
   });
   adicional = await ok(201, "POST", "/adicionais", {
     token: admin,
-    corpo: { nome: unico("Bacon"), preco: 3 },
+    corpo: { nome: unico("Bacon"), preco: 3, categoriaIds: [categoriaId] },
   });
   variacao = await ok(201, "POST", `/produtos/${lanche.id}/variacoes`, {
     token: admin,
@@ -179,7 +180,7 @@ describe("registro do pedido", () => {
     });
     const extra = await ok(201, "POST", "/adicionais", {
       token: admin,
-      corpo: { nome: unico("Extra"), preco: 1 },
+      corpo: { nome: unico("Extra"), preco: 1, categoriaIds: [categoriaId] },
     });
     const pedir = (itens: unknown) =>
       api("POST", "/pedidos", {
@@ -311,6 +312,263 @@ describe("registro do pedido", () => {
     });
     assert.equal(relido.itens[0].precoUnitarioPraticado, "40.00");
     assert.equal(relido.totais.total, "40.00");
+  });
+
+  it("o cardápio mostra o preço do dia (mesma conta do pedido) e quantas variações há", async () => {
+    const produto = await criarProduto(await criarCategoria(), 30);
+    assert.equal(produto.precoVigente, "30.00");
+    assert.equal(produto.promocaoVigente, null);
+    assert.equal(produto.totalVariacoes, 0);
+    const promo = await ok(201, "POST", "/promocoes", {
+      token: admin,
+      corpo: {
+        nome: unico("Promo"),
+        dataInicio: dia(0),
+        dataFim: dia(2),
+        tipoDesconto: "VALOR",
+        valorDesconto: 4.5,
+        produtoIds: [produto.id],
+      },
+    });
+    // Promoção que ainda não começou não conta.
+    await ok(201, "POST", "/promocoes", {
+      token: admin,
+      corpo: {
+        nome: unico("Futura"),
+        dataInicio: dia(1),
+        dataFim: dia(3),
+        tipoDesconto: "PERCENTUAL",
+        valorDesconto: 50,
+        produtoIds: [produto.id],
+      },
+    });
+    await ok(201, "POST", `/produtos/${produto.id}/variacoes`, {
+      token: admin,
+      corpo: { nome: "Grande", precoAdicional: 5 },
+    });
+    const relido = await ok(200, "GET", `/produtos/${produto.id}`, {
+      token: atendente.token,
+    });
+    assert.equal(relido.precoVigente, "25.50");
+    assert.equal(relido.promocaoVigente.id, promo.id);
+    assert.equal(relido.totalVariacoes, 1);
+
+    const busca = await ok(
+      200,
+      "GET",
+      `/produtos?busca=${encodeURIComponent(produto.nome.toUpperCase())}`,
+      { token: atendente.token },
+    );
+    assert.deepEqual(
+      busca.dados.map((p: Json) => p.id),
+      [produto.id],
+    );
+
+    const pedido = await ok(201, "POST", "/pedidos", {
+      token: atendente.token,
+      corpo: balcao({
+        itens: [{ itemVendavelId: produto.id, quantidade: 1 }],
+      }),
+    });
+    assert.equal(pedido.itens[0].precoUnitarioPraticado, relido.precoVigente);
+  });
+});
+
+describe("adicionais por categoria", () => {
+  it("cadastro exige categorias; a lista filtra por categoria e por item", async () => {
+    const lanches = await criarCategoria();
+    const bebidas = await criarCategoria();
+    const burger = await criarProduto(lanches, 20);
+    const suco = await criarProduto(bebidas, 8);
+    const kit = await ok(201, "POST", "/combos", {
+      token: admin,
+      corpo: {
+        nome: unico("Kit"),
+        preco: 25,
+        itens: [{ produtoId: burger.id }, { produtoId: suco.id }],
+      },
+    });
+
+    // Sem categoria, com lista vazia, repetida ou inexistente: recusado.
+    for (const [corpo, status] of [
+      [{ nome: "Sem cat", preco: 1 }, 400],
+      [{ nome: "Vazio", preco: 1, categoriaIds: [] }, 400],
+      [{ nome: "Repetida", preco: 1, categoriaIds: [lanches, lanches] }, 400],
+      [{ nome: "Inexistente", preco: 1, categoriaIds: [2000000000] }, 404],
+    ] as const) {
+      const r = await api("POST", "/adicionais", { token: admin, corpo });
+      assert.equal(r.status, status, JSON.stringify(corpo));
+    }
+
+    const queijo = await ok(201, "POST", "/adicionais", {
+      token: admin,
+      corpo: { nome: unico("Queijo"), preco: 2, categoriaIds: [lanches] },
+    });
+    assert.deepEqual(
+      queijo.categorias.map((c: Json) => c.id),
+      [lanches],
+    );
+    const gelo = await ok(201, "POST", "/adicionais", {
+      token: admin,
+      corpo: { nome: unico("Gelo"), preco: 0, categoriaIds: [bebidas] },
+    });
+
+    const ids = async (filtro: string) =>
+      (
+        await ok(200, "GET", `/adicionais?${filtro}&tamanhoPagina=100`, {
+          token: atendente.token,
+        })
+      ).dados.map((a: Json) => a.id);
+    assert.deepEqual(await ids(`categoriaId=${lanches}`), [queijo.id]);
+    assert.deepEqual(await ids(`itemVendavelId=${suco.id}`), [gelo.id]);
+    // Combo: valem as categorias dos produtos que o compõem.
+    assert.deepEqual(
+      (await ids(`itemVendavelId=${kit.id}`)).sort(
+        (a: number, b: number) => a - b,
+      ),
+      [queijo.id, gelo.id].sort((a, b) => a - b),
+    );
+    assert.equal(
+      (
+        await api("GET", "/adicionais?itemVendavelId=2000000000", {
+          token: atendente.token,
+        })
+      ).status,
+      404,
+    );
+
+    // PATCH com categoriaIds substitui a lista inteira.
+    const editado = await ok(200, "PATCH", `/adicionais/${gelo.id}`, {
+      token: admin,
+      corpo: { categoriaIds: [bebidas, lanches] },
+    });
+    assert.equal(editado.categorias.length, 2);
+    const crescente = (lista: number[]) => [...lista].sort((a, b) => a - b);
+    assert.deepEqual(
+      crescente(await ids(`categoriaId=${lanches}`)),
+      crescente([queijo.id, gelo.id]),
+    );
+    await ok(200, "PATCH", `/adicionais/${gelo.id}`, {
+      token: admin,
+      corpo: { categoriaIds: [bebidas] },
+    });
+    assert.deepEqual(await ids(`categoriaId=${lanches}`), [queijo.id]);
+  });
+
+  it("pedido recusa adicional que não é oferecido na categoria do item", async () => {
+    const lanches = await criarCategoria();
+    const bebidas = await criarCategoria();
+    const burger = await criarProduto(lanches, 20);
+    const suco = await criarProduto(bebidas, 8);
+    const kit = await ok(201, "POST", "/combos", {
+      token: admin,
+      corpo: {
+        nome: unico("Kit"),
+        preco: 25,
+        itens: [{ produtoId: burger.id }, { produtoId: suco.id }],
+      },
+    });
+    const bacon = await ok(201, "POST", "/adicionais", {
+      token: admin,
+      corpo: { nome: unico("Bacon"), preco: 3, categoriaIds: [lanches] },
+    });
+    const pedir = (itemVendavelId: number) =>
+      api("POST", "/pedidos", {
+        token: atendente.token,
+        corpo: balcao({
+          itens: [{ itemVendavelId, quantidade: 1, adicionalIds: [bacon.id] }],
+        }),
+      });
+
+    const r = await pedir(suco.id);
+    assert.equal(r.status, 409);
+    assert.match(r.corpo.error, /não é oferecido/);
+    assert.equal((await pedir(burger.id)).status, 201);
+    assert.equal((await pedir(kit.id)).status, 201);
+  });
+});
+
+describe("simulação do pedido", () => {
+  it("devolve preços e totais iguais aos do registro, sem gravar nada", async () => {
+    const freguês = await criarCliente();
+    const corpo = {
+      canal: "TELEFONE",
+      clienteId: freguês.id,
+      itens: [
+        {
+          itemVendavelId: lanche.id,
+          quantidade: 2,
+          variacaoId: variacao.id,
+          adicionalIds: [adicional.id],
+          observacao: "ao ponto",
+        },
+        { itemVendavelId: combo.id, quantidade: 1 },
+      ],
+      entrega: { taxaEntrega: 7.5 },
+      pagamentos: [{ formaPagamentoId: pix, valorPago: 50 }],
+    };
+    const quantos = async () =>
+      (
+        await ok(200, "GET", `/pedidos?clienteId=${freguês.id}`, {
+          token: atendente.token,
+        })
+      ).paginacao.total;
+
+    const simulado = await ok(200, "POST", "/pedidos/simulacao", {
+      token: atendente.token,
+      corpo,
+    });
+    assert.equal(await quantos(), 0);
+    assert.equal(simulado.tipoAtendimento, "ENTREGA");
+    assert.equal(simulado.itens[0].nome, lanche.nome);
+    assert.equal(simulado.itens[0].variacao.nome, "Duplo");
+    assert.equal(simulado.itens[0].adicionais[0].nome, adicional.nome);
+    assert.equal(simulado.itens[0].subtotal, "54.00");
+    // 54 + 22 + 7,50 de entrega
+    assert.equal(simulado.totais.total, "83.50");
+    assert.equal(simulado.totais.saldo, "33.50");
+
+    const criado = await ok(201, "POST", "/pedidos", {
+      token: atendente.token,
+      corpo,
+    });
+    assert.equal(await quantos(), 1);
+    for (const campo of [
+      "subtotalItens",
+      "taxaEntrega",
+      "total",
+      "totalPago",
+      "saldo",
+    ]) {
+      assert.equal(simulado.totais[campo], criado.totais[campo], campo);
+    }
+    assert.deepEqual(
+      simulado.itens.map((i: Json) => i.subtotal),
+      criado.itens.map((i: Json) => i.subtotal),
+    );
+
+    // Os mesmos erros do registro: pagamento acima do total, item inexistente.
+    const r1 = await api("POST", "/pedidos/simulacao", {
+      token: atendente.token,
+      corpo: {
+        ...corpo,
+        pagamentos: [{ formaPagamentoId: pix, valorPago: 999 }],
+      },
+    });
+    assert.equal(r1.status, 409);
+    const r2 = await api("POST", "/pedidos/simulacao", {
+      token: atendente.token,
+      corpo: {
+        ...corpo,
+        itens: [{ itemVendavelId: 2000000000, quantidade: 1 }],
+      },
+    });
+    assert.equal(r2.status, 400);
+    const r3 = await api("POST", "/pedidos/simulacao", {
+      token: atendente.token,
+      corpo: { canal: "APP", itens: corpo.itens },
+    });
+    assert.equal(r3.status, 400);
   });
 });
 
@@ -618,6 +876,155 @@ describe("ciclo de vida do pedido", () => {
 });
 
 describe("consultas e relatórios", () => {
+  it("filtros da lista: vários status, tipo de atendimento, mesa, entregador, busca e ordem", async () => {
+    const t = atendente.token;
+    const freguês = await criarCliente();
+    const mesa = await ok(201, "POST", "/mesas", {
+      token: admin,
+      corpo: { numero: 100000 + Math.floor(Math.random() * 800000) },
+    });
+    const retirada = await ok(201, "POST", "/pedidos", {
+      token: t,
+      corpo: balcao({ clienteId: freguês.id }),
+    });
+    const local = await ok(201, "POST", "/pedidos", {
+      token: t,
+      corpo: balcao({ clienteId: freguês.id, mesaId: mesa.id }),
+    });
+    const entrega = await ok(201, "POST", "/pedidos", {
+      token: t,
+      corpo: balcao({
+        clienteId: freguês.id,
+        entrega: { taxaEntrega: 5, entregadorId: entregador.id },
+      }),
+    });
+    await avancar(t, local.id, "EM_PREPARO");
+    await avancar(t, entrega.id, "CANCELADO");
+
+    const ids = async (filtro: string) =>
+      (
+        await ok(200, "GET", `/pedidos?clienteId=${freguês.id}&${filtro}`, {
+          token: t,
+        })
+      ).dados.map((p: Json) => p.id);
+    assert.deepEqual(await ids("status=RECEBIDO,EM_PREPARO"), [
+      local.id,
+      retirada.id,
+    ]);
+    assert.deepEqual(await ids("tipoAtendimento=RETIRADA"), [retirada.id]);
+    assert.deepEqual(await ids("tipoAtendimento=CONSUMO_LOCAL"), [local.id]);
+    assert.deepEqual(await ids("tipoAtendimento=ENTREGA"), [entrega.id]);
+    assert.deepEqual(await ids(`mesaId=${mesa.id}`), [local.id]);
+    assert.deepEqual(await ids(`entregadorId=${entregador.id}`), [entrega.id]);
+    assert.deepEqual(await ids(`atendenteId=${atendente.id}`), [
+      entrega.id,
+      local.id,
+      retirada.id,
+    ]);
+    assert.deepEqual(await ids("ordem=antigos"), [
+      retirada.id,
+      local.id,
+      entrega.id,
+    ]);
+    assert.deepEqual(await ids(`busca=%23${local.id}`), [local.id]);
+    assert.deepEqual(
+      await ids(`busca=${encodeURIComponent(freguês.nome.slice(0, 12))}`),
+      [entrega.id, local.id, retirada.id],
+    );
+    for (const filtro of [
+      "status=RECEBIDO,XYZ",
+      "tipoAtendimento=VOO",
+      "ordem=sorte",
+    ]) {
+      assert.equal(
+        (await api("GET", `/pedidos?${filtro}`, { token: t })).status,
+        400,
+        filtro,
+      );
+    }
+
+    // A mesa aparece ocupada pelo pedido em aberto até a conta fechar.
+    const mesaNaLista = async () =>
+      (
+        await ok(200, "GET", "/mesas?tamanhoPagina=100&ativa=true", {
+          token: t,
+        })
+      ).dados.find((m: Json) => m.id === mesa.id);
+    assert.equal((await mesaNaLista()).pedidoAberto.id, local.id);
+    await avancar(t, local.id, "PRONTO", "ENTREGUE_RETIRADO");
+    // Servido, mas sem pagamento: continua ocupada.
+    assert.equal((await mesaNaLista()).pedidoAberto.saldo, "20.00");
+    await ok(201, "POST", `/pedidos/${local.id}/pagamentos`, {
+      token: t,
+      corpo: { formaPagamentoId: dinheiro, valorPago: 20 },
+    });
+    assert.equal((await mesaNaLista()).pedidoAberto, null);
+  });
+
+  it("ficha do cliente: total de pedidos, ticket médio e nota média", async () => {
+    const t = atendente.token;
+    const freguês = await criarCliente();
+    const vazio = await ok(200, "GET", `/clientes/${freguês.id}`, { token: t });
+    assert.deepEqual(vazio.resumo, {
+      totalPedidos: 0,
+      totalGasto: "0.00",
+      ticketMedio: null,
+      notaMedia: null,
+    });
+    const a = await ok(201, "POST", "/pedidos", {
+      token: t,
+      corpo: balcao({ clienteId: freguês.id }),
+    }); // 20
+    const cupom = unico("FICHA").toUpperCase();
+    await ok(201, "POST", "/cupons", {
+      token: admin,
+      corpo: {
+        codigo: cupom,
+        tipoDesconto: "PERCENTUAL",
+        valorDesconto: 10,
+        dataInicio: dia(0),
+        dataFim: dia(0),
+      },
+    });
+    await ok(201, "POST", "/pedidos", {
+      token: t,
+      corpo: balcao({
+        clienteId: freguês.id,
+        cupomCodigo: cupom,
+        itens: [{ itemVendavelId: combo.id, quantidade: 1 }],
+        entrega: { taxaEntrega: 8 },
+      }),
+    }); // 22 - 2,20 de cupom + 8 = 27,80
+    const cancelado = await ok(201, "POST", "/pedidos", {
+      token: t,
+      corpo: balcao({ clienteId: freguês.id }),
+    });
+    await avancar(t, cancelado.id, "CANCELADO");
+    await avancar(t, a.id, "EM_PREPARO", "PRONTO", "ENTREGUE_RETIRADO");
+    await ok(201, "POST", `/pedidos/${a.id}/avaliacao`, {
+      token: t,
+      corpo: { nota: 4 },
+    });
+
+    const ficha = await ok(200, "GET", `/clientes/${freguês.id}`, { token: t });
+    assert.deepEqual(ficha.resumo, {
+      totalPedidos: 2,
+      totalGasto: "47.80",
+      ticketMedio: "23.90",
+      notaMedia: "4.0",
+    });
+    const naLista = (
+      await ok(
+        200,
+        "GET",
+        `/clientes?busca=${encodeURIComponent(freguês.telefone)}`,
+        { token: t },
+      )
+    ).dados.find((c: Json) => c.id === freguês.id);
+    assert.equal(naLista.totalPedidos, 2);
+    assert.ok(naLista.ultimoPedidoEm);
+  });
+
   it("filtro por status usa o status atual (e não qualquer status do histórico)", async () => {
     const t = atendente.token;
     const freguês = await criarCliente();
@@ -692,6 +1099,27 @@ describe("consultas e relatórios", () => {
         corpo: { quantidadeUtilizada: 0.05 },
       },
     );
+    // Estoque: em quantos produtos o ingrediente é usado, e quem fornece.
+    const noEstoque = await ok(
+      200,
+      "GET",
+      `/ingredientes?fornecedorId=${fornecedor.id}&ordem=estoque`,
+      { token: admin },
+    );
+    assert.equal(noEstoque.dados[0].usadoEm, 1);
+    const detalhe = await ok(200, "GET", `/ingredientes/${ingrediente.id}`, {
+      token: admin,
+    });
+    assert.deepEqual(
+      detalhe.produtos.map((p: Json) => p.id),
+      [produto.id],
+    );
+    const forn = (
+      await ok(200, "GET", "/fornecedores?tamanhoPagina=100", { token: admin })
+    ).dados.find((f: Json) => f.id === fornecedor.id);
+    assert.equal(forn.totalIngredientes, 1);
+    assert.deepEqual(forn.ingredientesPrevia, [ingrediente.nome]);
+
     const vendedor = await criarFuncionario("atendente");
     const pedir = (quantidade: number) =>
       ok(201, "POST", "/pedidos", {
