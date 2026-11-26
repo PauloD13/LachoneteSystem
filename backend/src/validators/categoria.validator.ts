@@ -1,8 +1,7 @@
 import { z } from "zod";
 
-// Schema de criação (POST). O limite acompanha a coluna categoria.nome
-// (VARCHAR(50)): validar aqui devolve um 400 com mensagem clara em vez de
-// deixar o banco recusar.
+// O limite acompanha a coluna (VARCHAR(50)): 400 com mensagem clara em vez
+// de erro do banco.
 export const criarCategoriaSchema = z.object({
   nome: z
     .string({ error: "O nome é obrigatório." })
@@ -11,7 +10,6 @@ export const criarCategoriaSchema = z.object({
     .max(50, "O nome deve ter no máximo 50 caracteres."),
 });
 
-// Schema de atualização parcial (PATCH) — torna todos os campos opcionais
 export const atualizarCategoriaSchema = criarCategoriaSchema.partial();
 
 export type CriarCategoriaDTO = z.infer<typeof criarCategoriaSchema>;

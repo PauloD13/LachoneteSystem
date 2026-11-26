@@ -16,12 +16,8 @@ export interface EstadoDaConsulta<T> {
 }
 
 /**
- * Carrega dados da API para uma tela, cuidando de "carregando", erro e
- * cancelamento. Substitui o par useState + useEffect que toda tela de
- * listagem repetiria.
- *
- * `chave` identifica O QUE está sendo buscado: quando ela muda (outra
- * página, outro filtro), a busca é refeita e a anterior é cancelada.
+ * Carrega dados da API cuidando de "carregando", erro e cancelamento. Quando
+ * `chave` muda (outra página, outro filtro), refaz a busca e cancela a anterior.
  *
  *   const { dados, carregando, erro, recarregar } = useConsulta(
  *     `clientes:${pagina}:${busca}`,
@@ -36,8 +32,7 @@ export function useConsulta<T>(
   const [resultado, setResultado] = useState<Resultado<T> | null>(null);
   const chaveAtual = `${chave}#${versao}`;
 
-  // Guarda sempre a versão mais nova da função `buscar`, sem que a busca
-  // seja refeita a cada renderização (a função é recriada em todas).
+  // `buscar` é recriada a cada render; a ref evita refazer a busca por isso.
   const buscarAtual = useRef(buscar);
   useEffect(() => {
     buscarAtual.current = buscar;
@@ -54,8 +49,7 @@ export function useConsulta<T>(
         if (!controle.signal.aborted) setResultado({ chave: chaveAtual, erro });
       },
     );
-    // Trocou de página/filtro (ou saiu da tela) antes da resposta: cancela,
-    // para uma resposta atrasada não sobrescrever a mais nova.
+    // Resposta atrasada não pode sobrescrever a mais nova.
     return () => controle.abort();
   }, [chaveAtual]);
 

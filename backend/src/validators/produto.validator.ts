@@ -6,11 +6,8 @@ import {
   listarComAtivoQuerySchema,
 } from "./comum.js";
 
-// Schema de criação (POST)
-// "nome", "preco" e "ativo" pertencem ao item_vendavel (supertipo);
-// "categoriaId" e "descricao" pertencem ao produto (subtipo). O service é quem
-// decide pra qual tabela cada campo vai — aqui é só o formato aceito na
-// entrada da API.
+// nome, preco e ativo vão para item_vendavel (supertipo); categoriaId e
+// descricao, para produto (subtipo). Quem separa é o service.
 export const criarProdutoSchema = z.object({
   nome: z
     .string({ error: "O nome é obrigatório." })
@@ -27,7 +24,6 @@ export const criarProdutoSchema = z.object({
   ativo: z.boolean().optional(),
 });
 
-// Schema de atualização parcial (PATCH)
 export const atualizarProdutoSchema = criarProdutoSchema.partial();
 
 export const listarProdutosQuerySchema = listarComAtivoQuerySchema.extend({

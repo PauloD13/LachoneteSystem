@@ -21,8 +21,7 @@ const camposBasicos = {
   ativo: z.boolean().optional(),
 };
 
-// Schema de criação (POST). Acesso ao sistema é opcional — mas login e senha
-// só fazem sentido juntos.
+// Acesso ao sistema é opcional, mas login e senha só valem juntos.
 export const criarFuncionarioSchema = z
   .object({
     ...camposBasicos,
@@ -34,7 +33,6 @@ export const criarFuncionarioSchema = z
     path: ["login"],
   });
 
-// Schema de atualização parcial (PATCH).
 //   login: "novo"  -> cria/troca o login (exige `senha` se ainda não tiver acesso)
 //   login: null    -> remove o acesso ao sistema
 //   senha: "nova"  -> o gerente redefine a senha de quem esqueceu

@@ -13,7 +13,5 @@ export interface ValorDaAutenticacao {
   temCargo(...cargos: NomeDeCargo[]): boolean;
 }
 
-// O contexto fica num arquivo separado do componente (AuthProvider.tsx)
-// porque arquivos de componente só devem exportar componentes — é o que
-// permite ao Vite recarregar a tela sem perder o estado ao editar.
+// Fora de AuthProvider.tsx para o Vite recarregar a tela sem perder estado.
 export const AuthContexto = createContext<ValorDaAutenticacao | null>(null);

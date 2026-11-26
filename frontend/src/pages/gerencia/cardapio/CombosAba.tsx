@@ -115,6 +115,7 @@ export function CombosAba({
   );
 }
 
+/** Monta o combo e compara o preço dele com a soma dos itens avulsos. */
 function EditorCombo({
   combo,
   aoSalvar,
@@ -139,6 +140,8 @@ function EditorCombo({
   );
   const [novoProduto, setNovoProduto] = useState("");
 
+  // Produto desativado some da lista de ativos, mas pode estar no combo:
+  // nesse caso o preço e o nome vêm do próprio combo.
   const precoDe = (id: number) =>
     paraNumero(
       listaProdutos.dados?.dados.find((p) => p.id === id)?.preco ??

@@ -207,7 +207,7 @@ Scripts disponíveis no backend:
 
 ## Testes automatizados
 
-`backend/tests/e2e/` traz 60 testes que conversam com a API por HTTP, como o
+`backend/tests/e2e/` traz 66 testes que conversam com a API por HTTP, como o
 frontend fará, contra um PostgreSQL de verdade — exercitam de uma vez rotas,
 validações, regras de negócio, triggers e constraints do banco:
 
@@ -248,14 +248,30 @@ Dica: rode `npm run format` antes de cada commit e o CI nunca vai reclamar de
 formatação. Os arquivos `.editorconfig` e `.gitattributes` deixam indentação e
 fim de linha iguais em todas as máquinas (inclusive no Windows).
 
+**Comentários no código.** O código diz _o que_ faz; o comentário existe para
+o que ele não consegue dizer sozinho:
+
+- **o porquê** de uma decisão que pareceria estranha (`hsts: false` porque o
+  deploy da sala é HTTP; a ficha técnica aceita um ingrediente só uma vez);
+- **a regra do enunciado** que a linha implementa (ex.: "Regra 4.1");
+- **a armadilha** que alguém cairia ao mexer (o fuso em datas, `Decimal` em
+  dinheiro);
+- **um resumo de uma linha** (`/** ... */`) em funções, hooks e componentes
+  exportados, que o editor mostra ao passar o mouse.
+
+Não comentar o que o nome já diz (`// Schema de criação (POST)` acima de
+`criarProdutoSchema`), nem narrar passos (`// 4. Valida e reporta o erro`),
+nem deixar histórico ("na etapa F8…"): o histórico fica no git. Comentário
+desatualizado é pior que nenhum, então ele muda junto com o código.
+
 **GitHub Actions** (`.github/workflows/ci.yml`) roda a cada push, em qualquer
 branch, e mostra ✔ ou ✖ ao lado do commit:
 
 | Job            | O que confere                                                                                                                                                                    |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend        | formatação, lint, compilação, e os 60 testes da API contra um PostgreSQL criado pelos scripts de `database/init/`                                                                |
+| Backend        | formatação, lint, compilação, e os 66 testes da API contra um PostgreSQL criado pelos scripts de `database/init/`                                                                |
 | Frontend       | formatação, lint, testes unitários e build                                                                                                                                       |
-| Docker Compose | `docker compose up` do zero (com senha de banco cheia de caracteres especiais), espera ficar `healthy`, confere que as telas são servidas e roda os 60 testes contra o container |
+| Docker Compose | `docker compose up` do zero (com senha de banco cheia de caracteres especiais), espera ficar `healthy`, confere que as telas são servidas e roda os 66 testes contra o container |
 
 Quando um passo falha, a aba **Actions** mostra qual e por quê; o comando do
 passo é o mesmo que você roda localmente.

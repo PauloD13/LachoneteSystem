@@ -1,10 +1,8 @@
-// Tipos "de infraestrutura": como a API embrulha as respostas.
+// Como a API embrulha as respostas.
 
 /**
- * Valor em dinheiro como a API devolve: TEXTO, não número (ex.: "10" ou
- * "27.50"). É de propósito — o backend usa Decimal para não perder
- * centavos em contas como 0.1 + 0.2. Para exibir, use `moeda()` de
- * lib/formatadores; para fazer conta, `paraNumero()`.
+ * Dinheiro chega como texto ("27.50"): o backend usa Decimal para não perder
+ * centavos. Exiba com `moeda()` e faça conta com `paraNumero()`.
  */
 export type Dinheiro = string;
 
@@ -15,10 +13,9 @@ export type Decimal = string;
 export type Instante = string;
 
 /**
- * Dia de calendário (validade de promoção, início de um cargo). Chega como
- * meia-noite UTC (ex.: "2027-01-04T00:00:00.000Z"). NUNCA passe por
- * `new Date(...).toLocaleDateString()`: no fuso do Brasil isso vira o dia
- * anterior. Use `dia()` de lib/formatadores.
+ * Dia de calendário, como meia-noite UTC ("2027-01-04T00:00:00.000Z"). Use
+ * `dia()` de lib/formatadores: `toLocaleDateString()` mostraria o dia
+ * anterior no fuso do Brasil.
  */
 export type Dia = string;
 
@@ -33,11 +30,7 @@ export interface Paginado<T> {
   };
 }
 
-/**
- * Parâmetros comuns das listagens paginadas (?pagina=1&tamanhoPagina=20).
- * É `type` (e não `interface`) para poder ser combinado com `&` e usado como
- * query string: interfaces não são aceitas onde se espera um Record.
- */
+/** `type`, e não `interface`, para caber onde se espera um Record (query string). */
 export type ConsultaPaginada = {
   pagina?: number;
   tamanhoPagina?: number;

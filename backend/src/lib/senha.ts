@@ -1,19 +1,11 @@
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 
-// Senha nunca é guardada: guarda-se o resultado de uma função de mão única
-// (hash). No login, aplica-se a mesma função à senha digitada e comparam-se
-// os resultados.
-//
-// Por que scrypt e não SHA-256? SHA-256 foi feito para ser RÁPIDO — ótimo
-// para conferir arquivos, péssimo para senhas: quem roubar o banco testa
-// bilhões de palpites por segundo. O scrypt é propositalmente lento e gasta
-// memória, o que torna cada palpite caro. Ele já vem no Node (node:crypto),
+// scrypt, e não SHA-256: é lento e gasta memória de propósito, então quem
+// roubar o banco não testa bilhões de palpites por segundo. Já vem no Node,
 // sem dependência nativa para compilar no container.
 //
-// Formato gravado em funcionario.senha_hash:
-//   scrypt$N$r$p$<sal em base64>$<hash em base64>
-// Os parâmetros vão junto para que possam ser aumentados no futuro sem
-// invalidar as senhas já cadastradas.
+// Formato em funcionario.senha_hash: scrypt$N$r$p$<sal>$<hash> (base64). Os
+// parâmetros vão junto para poderem subir sem invalidar senhas antigas.
 
 const N = 16384; // custo de CPU/memória (2^14)
 const R = 8;
@@ -37,8 +29,7 @@ function derivar(
 }
 
 export async function gerarHashDaSenha(senha: string): Promise<string> {
-  // Sal: valor aleatório por senha. Duas pessoas com a mesma senha ficam com
-  // hashes diferentes, e tabelas de hashes pré-calculados deixam de servir.
+  // Sal por senha: senhas iguais geram hashes diferentes.
   const sal = randomBytes(TAMANHO_DO_SAL);
   const chave = await derivar(senha, sal, N, R, P, TAMANHO_DA_CHAVE);
   return [
@@ -67,14 +58,12 @@ export async function conferirSenha(
     Number(p),
     esperada.length,
   );
-  // Comparação em tempo constante: não revela, pelo tempo de resposta,
-  // quantos bytes iniciais estavam certos.
+  // Tempo constante: o tempo de resposta não revela quantos bytes acertou.
   return timingSafeEqual(calculada, esperada);
 }
 
-// "Versão" da credencial: um resumo curto do hash da senha, embutido no
-// token. Se a senha for trocada (ou o acesso removido), o resumo muda e os
-// tokens emitidos antes deixam de ser aceitos.
+// Resumo do hash embutido no token: trocar a senha (ou remover o acesso)
+// invalida os tokens já emitidos.
 export function versaoDaCredencial(senhaHash: string): string {
   return createHash("sha256")
     .update(senhaHash)

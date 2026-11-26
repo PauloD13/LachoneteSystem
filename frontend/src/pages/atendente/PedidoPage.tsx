@@ -53,6 +53,7 @@ export function PedidoPage() {
   const [mudando, setMudando] = useState(false);
   const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
   const [recebendo, setRecebendo] = useState(false);
+  // A cozinha e o entregador mudam o status de outros aparelhos.
   usePeriodico(consulta.recarregar, 30000);
 
   // A resposta das ações já traz o pedido atualizado; a consulta, quando
@@ -111,6 +112,7 @@ export function PedidoPage() {
         <main className={estilos.conteudo}>
           <ErroAoCarregar
             erro={consulta.erro}
+            // Pedido que não existe não aparece tentando de novo.
             aoTentarDeNovo={
               consulta.erro instanceof ErroDaApi && consulta.erro.status === 404
                 ? undefined
@@ -381,6 +383,10 @@ export function PedidoPage() {
   );
 }
 
+/**
+ * Caminho completo do pedido, com hora em cada etapa já feita. Cancelado
+ * mostra só o que aconteceu: o caminho foi interrompido.
+ */
 function LinhaDoTempo({ pedido }: { pedido: Pedido }) {
   const caminho: StatusPedido[] = ["RECEBIDO", "EM_PREPARO", "PRONTO"];
   if (pedido.tipoAtendimento === "ENTREGA") caminho.push("SAIU_PARA_ENTREGA");
@@ -466,6 +472,7 @@ function LinhaDoTempo({ pedido }: { pedido: Pedido }) {
   );
 }
 
+/** Endereço, entregador e troca de entregador enquanto o pedido não saiu. */
 function Entrega({
   pedido,
   aoMudar,
@@ -475,11 +482,13 @@ function Entrega({
 }) {
   const avisos = useAvisos();
   const entrega = pedido.entrega!;
+  // Mesma regra da API: depois que saiu, o entregador fica.
   const podeTrocar =
     pedido.statusAtual === "RECEBIDO" ||
     pedido.statusAtual === "EM_PREPARO" ||
     pedido.statusAtual === "PRONTO";
   const [salvando, setSalvando] = useState(false);
+  // Só busca a lista quando ainda dá para trocar.
   const entregadores = useConsulta(`entregadores:${podeTrocar}`, (sinal) =>
     podeTrocar
       ? funcionarios.listar(
@@ -570,6 +579,7 @@ function Entrega({
   );
 }
 
+/** Nota de 1 a 5 do pedido entregue; depois de salva, só leitura. */
 function Avaliacao({
   pedido,
   aoAvaliar,
@@ -670,6 +680,7 @@ function Avaliacao({
   );
 }
 
+/** Recebe parte ou todo o saldo; em dinheiro, calcula o troco. */
 function FolhaPagamento({
   aberta,
   pedido,
@@ -696,6 +707,8 @@ function FolhaPagamento({
   const forma = lista.find((f) => f.id === formaId) ?? lista[0];
   const recebido = numeroDoCampo(valor);
   const ehDinheiro = forma?.nome === "dinheiro";
+  // Só em dinheiro se recebe a mais (troco); cartão e Pix não passam do saldo.
+  // A folga de 0,0001 absorve arredondamento de ponto flutuante.
   const troco = ehDinheiro && recebido > saldo ? recebido - saldo : 0;
   const invalido =
     !Number.isFinite(recebido) ||
@@ -706,6 +719,7 @@ function FolhaPagamento({
     if (!forma || invalido) return;
     setSalvando(true);
     try {
+      // Registra o que entra na conta; o troco volta ao cliente.
       const novo = await pedidos.pagar(
         pedido.id,
         forma.id,

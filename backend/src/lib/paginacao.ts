@@ -1,11 +1,6 @@
-// Toda listagem de primeiro nível da API é paginada e responde no mesmo
-// envelope:
-//
+// Toda listagem de primeiro nível é paginada, para tabelas que crescem
+// (clientes, pedidos) não devolverem milhares de linhas de uma vez:
 //   { "dados": [...], "paginacao": { pagina, tamanhoPagina, total, totalPaginas } }
-//
-// Sem paginação, uma tabela que cresce (clientes, pedidos) acaba devolvendo
-// milhares de linhas em uma única resposta — lenta para o banco, para a rede
-// e para o navegador.
 
 export interface Pagina {
   pagina: number;

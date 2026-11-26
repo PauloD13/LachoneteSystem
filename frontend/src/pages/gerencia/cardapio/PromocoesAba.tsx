@@ -27,6 +27,10 @@ const desconto = (tipo: TipoDesconto, valor: string) =>
     ? `${paraNumero(valor).toLocaleString("pt-BR")}%`
     : moeda(valor);
 
+/**
+ * Situação no dia de hoje. Dias AAAA-MM-DD comparam certo como texto, sem
+ * passar por Date (e pelo fuso); o último dia ainda vale.
+ */
 function situacao(inicio: string, fim: string): { texto: string; cor: string } {
   const hoje = hojeISO();
   if (diaParaInput(fim) < hoje)
@@ -126,6 +130,7 @@ function Promocoes() {
   );
 }
 
+/** Tipo, valor e validade: os mesmos campos na promoção e no cupom. */
 function CamposDeDesconto({
   tipo,
   setTipo,
@@ -190,6 +195,7 @@ function CamposDeDesconto({
   );
 }
 
+/** `aoFechar(true)` avisa a lista de que precisa recarregar. */
 function EditorPromocao({
   promocao,
   aoFechar,
@@ -225,6 +231,7 @@ function EditorPromocao({
       valorDesconto: numeroDoCampo(valor),
       dataInicio: inicio,
       dataFim: fim,
+      // A lista inteira: ao editar, a API troca os produtos pelos marcados.
       produtoIds: marcados,
     };
     if (
@@ -450,6 +457,7 @@ function EditorCupom({
   async function salvar(evento: FormEvent) {
     evento.preventDefault();
     const corpo = {
+      // A API também normaliza; aqui é para o aviso mostrar o código final.
       codigo: codigo.trim().toUpperCase(),
       tipoDesconto: tipo,
       valorDesconto: numeroDoCampo(valor),

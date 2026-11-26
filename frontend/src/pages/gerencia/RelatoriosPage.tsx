@@ -17,6 +17,10 @@ import { ROTULO_UNIDADE } from "../../lib/rotulos";
 
 type Periodo = "hoje" | "semana" | "mes" | "outro";
 
+/**
+ * Período em dias AAAA-MM-DD, incluindo hoje: "semana" são os últimos 7 dias
+ * e "mês" começa no dia 1. Contas em texto, sem Date, para não errar o fuso.
+ */
 function intervalo(
   periodo: Periodo,
   hoje: string,
@@ -50,10 +54,12 @@ export function RelatoriosPage() {
     funcionarios.listar({ ativo: true, tamanhoPagina: 100 }, s),
   );
 
+  // Largura das barras relativa ao mais vendido; o 1 evita dividir por zero.
   const maior = Math.max(
     1,
     ...(top.dados?.map((t) => t.quantidadeVendida) ?? [1]),
   );
+  // Só para exibir a soma (não volta para a API), então Number basta.
   const totalPeriodo =
     atendentes.dados?.reduce((s, a) => s + Number(a.totalVendido), 0) ?? 0;
 
