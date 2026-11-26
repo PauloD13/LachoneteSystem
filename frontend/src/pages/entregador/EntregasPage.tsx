@@ -22,6 +22,7 @@ import {
 import type { Pedido } from "../../types/dominio";
 import estilos from "../atendente/Atendente.module.css";
 
+/** Busca do endereço no Google Maps (abre o app de mapas no celular). */
 function linkDoMapa(p: Pedido): string {
   const e = p.entrega!.endereco;
   const texto = `${e.logradouro}, ${e.numero}, ${e.bairro}, ${e.cidade}`;
@@ -41,7 +42,8 @@ export function EntregasPage() {
   const eu = usuario?.id ?? 0;
   const hoje = hojeISO();
 
-  // Em rota e prontas (minhas ou ainda sem entregador) + entregues hoje.
+  // Em rota e prontas de todos, filtradas abaixo: uma pronta sem entregador
+  // pode ser assumida por qualquer um. As entregues são só minhas, de hoje.
   const andamento = useConsulta("entregas:andamento", (sinal) =>
     pedidos.listar(
       {

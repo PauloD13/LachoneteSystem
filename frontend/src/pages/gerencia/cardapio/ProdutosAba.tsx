@@ -126,6 +126,7 @@ export function ProdutosAba({
 
       {(novo || atual) && (
         <EditorProduto
+          // A key recria o formulário (estado limpo) ao trocar de produto.
           key={novo ? "novo" : atual!.id}
           produto={novo ? null : atual}
           categorias={cats.dados?.dados ?? []}
@@ -140,6 +141,10 @@ export function ProdutosAba({
   );
 }
 
+/**
+ * Formulário do produto. Devolve o registro salvo em `aoSalvar` para o editor
+ * seguir nele enquanto a lista recarrega (ver useSelecaoNaLista).
+ */
 function EditorProduto({
   produto,
   categorias: listaCategorias,
@@ -178,6 +183,8 @@ function EditorProduto({
     if (ok && salvo) aoSalvar(salvo);
   }
 
+  // Desativar em vez de excluir: o produto sai do cardápio sem apagar o
+  // histórico dos pedidos em que já foi vendido.
   async function alternarAtivo() {
     if (!produto) return;
     let salvo: Produto | undefined;
@@ -297,6 +304,7 @@ function EditorProduto({
   );
 }
 
+/** Tamanhos e versões do produto, cada um com acréscimo sobre o preço base. */
 function Variacoes({ produtoId }: { produtoId: number }) {
   const lista = useConsulta(`variacoes:${produtoId}`, (s) =>
     variacoes.listar(produtoId, s),
@@ -405,6 +413,7 @@ function Variacoes({ produtoId }: { produtoId: number }) {
   );
 }
 
+/** Ingredientes por unidade vendida; base do relatório de consumo estimado. */
 function FichaTecnica({ produtoId }: { produtoId: number }) {
   const ficha = useConsulta(`ficha:${produtoId}`, (s) =>
     fichaTecnica.listar(produtoId, s),
@@ -416,6 +425,7 @@ function FichaTecnica({ produtoId }: { produtoId: number }) {
   const [ingredienteId, setIngredienteId] = useState("");
   const [qtd, setQtd] = useState("");
 
+  // Cada ingrediente entra uma vez: para mudar a quantidade, tira e põe de novo.
   const usados = new Set(ficha.dados?.map((f) => f.ingredienteId));
   const disponiveis = ings.dados?.dados.filter((i) => !usados.has(i.id)) ?? [];
   const unidade = ings.dados?.dados.find(

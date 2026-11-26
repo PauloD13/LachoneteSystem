@@ -21,20 +21,15 @@ const enviromentSchema = z
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
-    // Origens (outros sites) autorizadas a chamar a API pelo navegador.
-    // Opcional: as telas do sistema são servidas pelo próprio backend (e,
-    // em desenvolvimento, pelo proxy do Vite), ou seja, da MESMA origem da
-    // API, e não precisam de CORS. Sem a variável, nenhuma outra origem é
-    // autorizada (false). "*" libera todas; várias separadas por vírgula.
+    // Outras origens autorizadas a chamar a API pelo navegador. Opcional: as
+    // telas vêm da mesma origem (backend ou proxy do Vite). "*" libera
+    // todas; várias separadas por vírgula.
     CORS_ORIGIN: z
       .string()
       .optional()
       .transform((val): string | string[] | false => {
         if (!val) return false;
-        // Se for apenas o caractere coringa '*', retorna como string única
         if (val === "*") return val;
-
-        // Caso contrário, divide por vírgula e remove espaços extras
         return val.split(",").map((url) => url.trim());
       }),
     // Fuso do negócio: define o que é "hoje" para validade de promoções e
@@ -135,14 +130,11 @@ const enviromentSchema = z
 
 const parsedEnv = enviromentSchema.safeParse(semVazias);
 
-// 4. Verifica se a validação falhou e reporta o erro imediatamente
 if (!parsedEnv.success) {
   console.error("Erro de validação nas variáveis de ambiente:");
   console.error(
     JSON.stringify(z.flattenError(parsedEnv.error).fieldErrors, null, 2),
   );
-
-  // Encerra a aplicação imediatamente se faltar algo obrigatório
   process.exit(1);
 }
 
@@ -156,9 +148,8 @@ function montarDatabaseUrl(): string {
   return `postgresql://${usuario}:${senha}@${env.DB_HOST}:${env.DB_PORT}/${banco}?schema=public`;
 }
 
-// Fora de produção, sem JWT_SECRET, gera-se uma chave que vale só enquanto o
-// processo estiver de pé (a cada reinício os tokens antigos deixam de valer).
-// Evita ter uma chave "de exemplo" versionada que alguém esqueça em produção.
+// Fora de produção, sem JWT_SECRET, a chave é aleatória por processo: melhor
+// que uma chave "de exemplo" versionada que alguém esqueça em produção.
 function resolverJwtSecret(): string {
   if (env.JWT_SECRET) return env.JWT_SECRET;
   console.warn(
@@ -167,7 +158,6 @@ function resolverJwtSecret(): string {
   return randomBytes(48).toString("hex");
 }
 
-// 5. Exporta as variáveis validadas (com tipos automáticos do TypeScript)
 export const environment = {
   ...env,
   DATABASE_URL: montarDatabaseUrl(),

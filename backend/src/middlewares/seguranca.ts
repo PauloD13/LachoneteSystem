@@ -3,20 +3,11 @@ import helmet from "helmet";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { environment } from "../config/env.js";
 
-// Cabeçalhos de segurança padrão (e remoção do "X-Powered-By: Express", que
-// só serve para contar a um atacante qual tecnologia roda aqui).
-//
-// Dois padrões do helmet são desligados porque pressupõem HTTPS, e o deploy
-// deste projeto (servidor local da sala) é HTTP:
-//   - HSTS manda o navegador usar só HTTPS neste endereço;
-//   - "upgrade-insecure-requests" faz o navegador trocar http:// por https://
-//     em tudo que a página carrega — o que quebraria o frontend quando ele
-//     for servido por este mesmo backend.
-// Se um dia houver HTTPS na frente da API, basta remover as duas linhas.
-//
-// Atenção para a etapa do frontend: a Content-Security-Policy padrão bloqueia
-// <script> inline e scripts de outros domínios (CDN). Use arquivos .js
-// próprios ou ajuste as diretivas aqui.
+// Cabeçalhos padrão do helmet (e sem "X-Powered-By"). HSTS e
+// "upgrade-insecure-requests" ficam desligados porque o deploy da sala é
+// HTTP: com eles o navegador trocaria http:// por https:// e o frontend não
+// carregaria. Com HTTPS na frente, basta remover as duas linhas. A CSP padrão
+// bloqueia <script> inline e CDNs; o frontend não usa nenhum dos dois.
 export const cabecalhosDeSeguranca = helmet({
   hsts: false,
   contentSecurityPolicy: {
@@ -32,15 +23,10 @@ function responder429(mensagem: string) {
   };
 }
 
-// Limite geral por IP: freia scripts em loop e abuso da API como um todo.
-//
-// O contador fica na memória deste processo — suficiente para um único
-// container. Com várias réplicas do backend seria preciso um armazenamento
-// compartilhado (Redis).
-//
-// Em Docker Desktop (Windows/macOS) todas as máquinas da rede chegam ao
-// container com o MESMO IP (o do gateway). Se a turma inteira for usar o
-// sistema ao mesmo tempo nesse cenário, aumente LIMITE_REQUISICOES_POR_MINUTO.
+// Limite geral por IP, contado na memória (basta para um container; com
+// réplicas seria preciso Redis). No Docker Desktop (Windows/macOS) toda a
+// rede chega com o IP do gateway: com a turma inteira usando, aumente
+// LIMITE_REQUISICOES_POR_MINUTO.
 export const limiteGlobal: RequestHandler =
   environment.LIMITE_REQUISICOES_POR_MINUTO === 0
     ? semLimite
@@ -56,10 +42,8 @@ export const limiteGlobal: RequestHandler =
         ),
       });
 
-// Limite do login: conta só as tentativas que FALHARAM, por IP + login.
-// É o que impede adivinhar senha por tentativa e erro. A chave inclui o login
-// para que alguém errando a própria senha não bloqueie os colegas que
-// compartilham o mesmo IP.
+// Login: conta só tentativas que falharam, por IP + login — quem erra a
+// própria senha não bloqueia os colegas do mesmo IP.
 export const limiteDeLogin: RequestHandler =
   environment.LIMITE_TENTATIVAS_LOGIN === 0
     ? semLimite

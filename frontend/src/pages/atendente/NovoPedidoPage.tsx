@@ -54,6 +54,7 @@ export function NovoPedidoPage() {
           mesa: { id: m.id, numero: m.numero },
           atendimento: "CONSUMO_LOCAL",
         });
+        // Limpa a URL para um F5 não pôr a mesa de volta depois de trocada.
         setParametros({}, { replace: true });
       })
       .catch(() => {});
@@ -69,6 +70,8 @@ export function NovoPedidoPage() {
     categoria ?? listaCategorias.dados?.dados[0]?.id ?? null;
   const termo = busca.trim();
 
+  // A busca ignora a categoria escolhida e procura no cardápio todo. Combos e
+  // produtos viram o mesmo formato (ItemDoCardapio) para a mesma lista.
   const cardapio = useConsulta(
     `novo:cardapio:${termo ? `busca:${termo}` : categoriaAtual}`,
     async (sinal): Promise<ItemDoCardapio[]> => {
@@ -85,6 +88,7 @@ export function NovoPedidoPage() {
             c.descricao ??
             c.itens.map((i) => `${i.quantidade}× ${i.nome}`).join(", "),
           preco: paraNumero(c.preco),
+          // Soma dos itens avulsos: mostra quanto o combo economiza.
           precoCheio: c.itens.reduce(
             (s, i) => s + paraNumero(i.precoIndividual) * i.quantidade,
             0,
@@ -116,6 +120,7 @@ export function NovoPedidoPage() {
     },
   );
 
+  // Só o total interessa (contador do cabeçalho): uma linha basta.
   const emAberto = useConsulta("novo:abertos", (sinal) =>
     pedidos.listar({ status: STATUS_EM_ABERTO, tamanhoPagina: 1 }, sinal),
   );
@@ -127,11 +132,13 @@ export function NovoPedidoPage() {
       : (listaCategorias.dados?.dados.find((c) => c.id === categoriaAtual)
           ?.nome ?? "");
 
+  // A API só exige cliente no app e na entrega (regra 4.1); a tela pede também
+  // por telefone, para haver a quem ligar de volta. A trava fica no fechamento.
   const clienteObrigatorio = carrinho.canal !== "BALCAO";
 
   function colocarNoPedido(item: Parameters<typeof adicionar>[0]) {
     adicionar(item);
-    setPulo((p) => !p);
+    setPulo((p) => !p); // alterna para reiniciar a animação da sacola
     avisos.sucesso(`${item.quantidade}× ${item.nome} adicionado`);
   }
 

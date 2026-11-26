@@ -1,8 +1,7 @@
 import { z } from "zod";
 import { paginacaoQuerySchema } from "./comum.js";
 
-// Schema de criação (POST). Os limites acompanham as colunas da tabela
-// cliente (nome e email são VARCHAR(150)).
+// Limites acompanham as colunas (nome e email são VARCHAR(150)).
 export const criarClienteSchema = z.object({
   nome: z
     .string({ error: "O nome é obrigatório." })
@@ -32,7 +31,6 @@ export const criarClienteSchema = z.object({
   enderecoPadraoCep: z.string().trim().max(9).nullish(),
 });
 
-// Schema de atualização parcial (PATCH) — torna todos os campos opcionais
 export const atualizarClienteSchema = criarClienteSchema.partial();
 
 // Com a lista paginada, o atendente precisa de um jeito de achar o cliente

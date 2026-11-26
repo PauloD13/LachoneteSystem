@@ -51,6 +51,7 @@ const COLUNAS: {
 // Tempo a partir do qual o relógio da comanda fica vermelho.
 const MINUTOS_DE_ALERTA = 15;
 
+/** Quando o pedido entrou na coluna (o registro mais recente desse status). */
 function quandoEntrou(pedido: Pedido, status: StatusPedido): string {
   return (
     [...pedido.statusHistorico].reverse().find((h) => h.status === status)
@@ -78,6 +79,7 @@ export function CozinhaPage() {
     ),
   );
   usePeriodico(fila.recarregar, 10000);
+  // Os relógios das comandas andam sem precisar buscar de novo.
   usePeriodico(() => setAgora(Date.now()), 30000);
   useEffect(() => () => clearTimeout(timerDestaque.current), []);
 
@@ -85,6 +87,7 @@ export function CozinhaPage() {
     setOcupado(pedido.id);
     try {
       await pedidos.mudarStatus(pedido.id, para);
+      // Destaca por 1 s a comanda que mudou de coluna.
       setMovido(pedido.id);
       clearTimeout(timerDestaque.current);
       timerDestaque.current = setTimeout(() => setMovido(null), 1000);
@@ -96,6 +99,7 @@ export function CozinhaPage() {
       fila.recarregar();
     } catch (erro) {
       avisos.erro(erro);
+      // Outro aparelho pode ter mexido no pedido: mostra o estado real.
       fila.recarregar();
     } finally {
       setOcupado(null);

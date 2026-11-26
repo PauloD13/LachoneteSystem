@@ -39,6 +39,7 @@ export function ClientesPage() {
       sinal,
     ),
   );
+  // Sem escolha, a ficha mostra o primeiro da página.
   const idFicha = selecionado ?? lista.dados?.dados[0]?.id ?? null;
 
   return (
@@ -169,6 +170,7 @@ export function ClientesPage() {
   );
 }
 
+/** Dados, endereço e últimos pedidos do cliente (consultas próprias). */
 function Ficha({ id, aoEditar }: { id: number; aoEditar(c: Cliente): void }) {
   const ficha = useConsulta(`cliente:${id}`, (sinal) =>
     clientes.buscar(id, sinal),

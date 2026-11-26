@@ -13,7 +13,6 @@ export const criarCargoSchema = z.object({
     .max(30, "O nome deve ter no máximo 30 caracteres."),
 });
 
-// Schema de atualização parcial (PATCH) — torna todos os campos opcionais
 export const atualizarCargoSchema = criarCargoSchema.partial();
 
 export type CriarCargoDTO = z.infer<typeof criarCargoSchema>;

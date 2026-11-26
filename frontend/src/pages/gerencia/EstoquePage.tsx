@@ -21,6 +21,7 @@ import type {
 
 /** Tela 13 — Estoque: ingredientes (menor estoque primeiro) e fornecedores. */
 export function EstoquePage() {
+  // Menor estoque primeiro: o que está acabando aparece no topo.
   const [ordem, setOrdem] = useState<"estoque" | "nome">("estoque");
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
@@ -32,6 +33,7 @@ export function EstoquePage() {
   );
   const termo = busca.trim();
 
+  // Trocar a ordem ou a busca volta para a página 1 (ver setPagina(1) abaixo).
   const ings = useConsulta(`estoque:${ordem}:${termo}:${pagina}`, (s) =>
     ingredientes.listar(
       { ordem, busca: termo || undefined, pagina, tamanhoPagina: 20 },
@@ -270,6 +272,7 @@ export function EstoquePage() {
   );
 }
 
+/** Cria ou edita um ingrediente (estoque, unidade, fornecedor). */
 function FormIngrediente({
   ingrediente,
   fornecedores: lista,
@@ -280,6 +283,7 @@ function FormIngrediente({
   aoConcluir(): void;
 }) {
   const { executar, ocupado, erros } = useAcao();
+  // A listagem não traz em quais produtos o ingrediente é usado; o detalhe traz.
   const detalhe = useConsulta(`ingrediente:${ingrediente?.id}`, (s) =>
     ingrediente
       ? ingredientes.buscar(ingrediente.id, s)
@@ -424,6 +428,7 @@ function FormIngrediente({
   );
 }
 
+/** Cria ou edita um fornecedor. */
 function FormFornecedor({
   fornecedor,
   aoConcluir,
