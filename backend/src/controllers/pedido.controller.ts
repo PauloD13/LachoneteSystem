@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import * as pedidoService from "../services/pedido.service.js";
 import { usuarioDe } from "../middlewares/autenticacao.js";
+import { publicarPedido } from "../lib/eventos.js";
 import { idParamSchema } from "../validators/comum.js";
 import {
   criarPedidoSchema,
@@ -11,9 +12,20 @@ import {
   avaliarPedidoSchema,
 } from "../validators/pedido.validator.js";
 
+// Toda ação que muda um pedido avisa as telas conectadas (cozinha, listas),
+// depois de gravada.
+function responderEAvisar<T extends { id: number; statusAtual: string }>(
+  res: Response,
+  status: number,
+  pedido: T,
+): void {
+  res.status(status).json(pedido);
+  publicarPedido({ id: pedido.id, statusAtual: pedido.statusAtual });
+}
+
 export async function criar(req: Request, res: Response): Promise<void> {
   const dados = criarPedidoSchema.parse(req.body);
-  res.status(201).json(await pedidoService.criar(dados, usuarioDe(req)));
+  responderEAvisar(res, 201, await pedidoService.criar(dados, usuarioDe(req)));
 }
 
 // Mesmo corpo do POST /pedidos; nada é gravado.
@@ -48,7 +60,7 @@ export async function atualizarStatus(
 ): Promise<void> {
   const { id } = idParamSchema.parse(req.params);
   const { status } = atualizarStatusSchema.parse(req.body);
-  res.status(200).json(await pedidoService.atualizarStatus(id, status));
+  responderEAvisar(res, 200, await pedidoService.atualizarStatus(id, status));
 }
 
 export async function adicionarPagamento(
@@ -57,7 +69,7 @@ export async function adicionarPagamento(
 ): Promise<void> {
   const { id } = idParamSchema.parse(req.params);
   const dados = pagamentoSchema.parse(req.body);
-  res.status(201).json(await pedidoService.adicionarPagamento(id, dados));
+  responderEAvisar(res, 201, await pedidoService.adicionarPagamento(id, dados));
 }
 
 export async function definirEntregador(
@@ -66,11 +78,15 @@ export async function definirEntregador(
 ): Promise<void> {
   const { id } = idParamSchema.parse(req.params);
   const { entregadorId } = definirEntregadorSchema.parse(req.body);
-  res.status(200).json(await pedidoService.definirEntregador(id, entregadorId));
+  responderEAvisar(
+    res,
+    200,
+    await pedidoService.definirEntregador(id, entregadorId),
+  );
 }
 
 export async function avaliar(req: Request, res: Response): Promise<void> {
   const { id } = idParamSchema.parse(req.params);
   const dados = avaliarPedidoSchema.parse(req.body);
-  res.status(201).json(await pedidoService.avaliar(id, dados));
+  responderEAvisar(res, 201, await pedidoService.avaliar(id, dados));
 }

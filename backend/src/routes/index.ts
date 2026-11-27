@@ -18,6 +18,7 @@ import promocaoRoutes from "./promocao.routes.js";
 import cupomRoutes from "./cupom.routes.js";
 import pedidoRoutes from "./pedido.routes.js";
 import relatorioRoutes from "./relatorio.routes.js";
+import { transmitirEventos } from "../lib/eventos.js";
 
 const router = Router();
 
@@ -89,6 +90,7 @@ router.use("/ingredientes", ingredienteRoutes);
 
 // Operação
 router.use("/pedidos", pedidoRoutes);
+router.get("/eventos", transmitirEventos);
 router.use("/relatorios", relatorioRoutes);
 
 export default router;

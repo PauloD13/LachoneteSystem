@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { useConsulta } from "../../hooks/useConsulta";
 import { usePeriodico } from "../../hooks/usePeriodico";
+import { useAoVivo } from "../../hooks/useAoVivo";
 import { mesas } from "../../services/cadastros";
 import { Chip } from "../../components/ui/Chip";
 import { ErroAoCarregar, Esqueleto, Vazio } from "../../components/ui/Estados";
@@ -17,7 +18,8 @@ export function MesasPage() {
   const lista = useConsulta("mesas", (sinal) =>
     mesas.listar({ ativa: true, tamanhoPagina: 100 }, sinal),
   );
-  usePeriodico(lista.recarregar, 20000);
+  const aoVivo = useAoVivo(lista.recarregar);
+  usePeriodico(lista.recarregar, aoVivo ? 120000 : 20000);
 
   const todas = lista.dados?.dados ?? [];
   const ocupadas = todas.filter((m) => m.pedidoAberto);

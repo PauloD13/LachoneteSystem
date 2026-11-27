@@ -4,6 +4,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useAvisos } from "../../hooks/useAvisos";
 import { useConsulta } from "../../hooks/useConsulta";
 import { usePeriodico } from "../../hooks/usePeriodico";
+import { useAoVivo } from "../../hooks/useAoVivo";
 import { pedidos } from "../../services/pedidos";
 import { Botao } from "../../components/ui/Botao";
 import { Icone } from "../../components/ui/Icone";
@@ -66,10 +67,12 @@ export function EntregasPage() {
       sinal,
     ),
   );
-  usePeriodico(() => {
+  const recarregar = () => {
     andamento.recarregar();
     feitas.recarregar();
-  }, 20000);
+  };
+  const aoVivo = useAoVivo(recarregar);
+  usePeriodico(recarregar, aoVivo ? 120000 : 20000);
 
   const lista = andamento.dados?.dados ?? [];
   const emRota = lista.filter(

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import { useAvisos } from "../../hooks/useAvisos";
 import { useConsulta } from "../../hooks/useConsulta";
 import { usePeriodico } from "../../hooks/usePeriodico";
+import { useAoVivo } from "../../hooks/useAoVivo";
 import { pedidos } from "../../services/pedidos";
 import { formasPagamento, funcionarios } from "../../services/cadastros";
 import { ErroDaApi } from "../../services/api";
@@ -54,7 +55,8 @@ export function PedidoPage() {
   const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
   const [recebendo, setRecebendo] = useState(false);
   // A cozinha e o entregador mudam o status de outros aparelhos.
-  usePeriodico(consulta.recarregar, 30000);
+  const aoVivo = useAoVivo(consulta.recarregar, (e) => e.id === idPedido);
+  usePeriodico(consulta.recarregar, aoVivo ? 120000 : 30000);
 
   // A resposta das ações já traz o pedido atualizado; a consulta, quando
   // recarrega, volta a ser a fonte.

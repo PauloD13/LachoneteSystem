@@ -52,6 +52,11 @@ export function definirToken(novo: string | null): void {
   token = novo;
 }
 
+/** Token da sessão atual (para conexões feitas fora de `requisitar`). */
+export function tokenAtual(): string | null {
+  return token;
+}
+
 /** Chamado quando uma requisição autenticada recebe 401. */
 export function definirAoExpirarSessao(callback: (() => void) | null): void {
   aoExpirarSessao = callback;

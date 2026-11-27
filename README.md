@@ -364,6 +364,7 @@ pequenas por natureza e voltam como lista simples.
 | Estoque   | `/fornecedores`, `/ingredientes`         | `/ingredientes?fornecedorId=&busca=&ordem=nome\|estoque&repor=true` (estoque = menor primeiro; repor = no estoque mínimo ou abaixo); cada ingrediente traz `repor`, `usadoEm` (nº de produtos) e o detalhe, `produtos`. Fornecedores trazem `totalIngredientes` e `ingredientesPrevia`                                                                                                                                                                                           |
 | Operação  | `/pedidos`                               | `POST /`, `POST /simulacao` (mesmo corpo; devolve itens precificados e totais sem gravar), `GET /` (filtros `status` — aceita vários, separados por vírgula —, `clienteId`, `mesaId`, `atendenteId`, `entregadorId`, `tipoAtendimento`, `busca` — número do pedido ou nome/telefone do cliente —, `dataInicio`, `dataFim`, `ordem=recentes\|antigos`), `GET /:id`, `POST /:id/status`, `POST /:id/pagamentos`, `PATCH /:id/entrega` (define o entregador), `POST /:id/avaliacao` |
 | Operação  | `/relatorios`                            | `GET /mais-vendidos`, `GET /consumo-ingredientes`, `GET /vendas-por-atendente` — todos com `?dataInicio=AAAA-MM-DD&dataFim=AAAA-MM-DD`                                                                                                                                                                                                                                                                                                                                           |
+| Operação  | `/eventos`                               | `GET /` — Server-Sent Events: a conexão fica aberta e recebe `event: pedido` (`{ id, statusAtual }`) a cada pedido criado ou alterado. As telas da cozinha, de pedidos, de mesas e de entregas usam para atualizar na hora                                                                                                                                                                                                                                                       |
 
 ### Exemplo: registrar um pedido
 
@@ -444,6 +445,12 @@ bloco `totais` (`subtotalItens`, `descontoCupom`, `taxaEntrega`, `total`,
   cozinha, e cancelar depois do preparo não devolve. Com `estoque_minimo`
   preenchido, o ingrediente no mínimo ou abaixo aparece para repor (filtro
   `?repor=true`, selo na tela e contador no menu da gerência).
+- **Tempo real**: cada pedido criado ou alterado é avisado por
+  `GET /api/eventos` (Server-Sent Events) a todas as telas abertas; a
+  cozinha mostra "ao vivo" enquanto a conexão funciona. Sem ela (rede
+  instável, servidor reiniciando), as telas voltam a consultar a API a cada
+  10–30 s e reconectam sozinhas. O canal fica na memória do container: com
+  várias réplicas do backend seria preciso um canal compartilhado.
 - **Datas**: "hoje" segue o fuso do negócio (`APP_TIMEZONE`, padrão
   `America/Sao_Paulo`), não o do servidor.
 
@@ -470,5 +477,3 @@ frente da API; e o contador de limite de requisições fica na memória de um
 ## Próximos incrementos sugeridos
 
 - fotos dos produtos no cardápio;
-- atualização em tempo real (WebSocket) na cozinha, no lugar da consulta a
-  cada 10 s;
