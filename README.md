@@ -12,7 +12,8 @@ Este repositório implementa a situação de aprendizagem descrita em `docs/Aná
 - modelo lógico relacional normalizado;
 - documentação técnica de apoio;
 - backend conectado a PostgreSQL;
-- frontend web (base pronta; telas em construção a partir do protótipo).
+- frontend web completo, com o design system Sabor & Cia;
+- deploy em Docker Compose, com CI, segurança e adequação à LGPD.
 
 O foco principal é garantir consistência entre **regras de negócio**, **schema do banco** e **camada de aplicação**.
 
@@ -24,7 +25,11 @@ O domínio contempla:
 - pedidos com itens, adicionais, formas de pagamento e cupom;
 - histórico de status do pedido ao longo do tempo;
 - controle de combos, promoções e ficha técnica de ingredientes por produto;
-- suporte a consumo local e delivery.
+- estoque com mínimo de reposição e baixa automática pela ficha técnica;
+- suporte a consumo local e delivery, com atualização em tempo real;
+- fotos dos produtos no cardápio;
+- direitos do titular dos dados (LGPD): aviso de privacidade, exportação e
+  exclusão dos dados do cliente.
 
 ## Arquitetura do repositório
 
@@ -39,7 +44,7 @@ LachoneteSystem/
 │       └── 002_seed.sql    # Dados iniciais: cargos, formas de pagamento, categorias
 ├── docs/                   # Artefatos de modelagem e justificativas
 ├── frontend/               # Telas: React + TypeScript + Vite (ver frontend/README.md)
-├── scripts/                # Scripts utilitários de estrutura
+├── scripts/                # semear-demo.mjs (dados de demonstração) e utilitários
 ├── docker-compose.yml      # Orquestra backend (API + telas) + PostgreSQL
 └── .env.example            # Variáveis de ambiente da stack
 ```
@@ -80,7 +85,9 @@ A pasta `docs/` concentra os artefatos da modelagem:
 - `02-der.dbml` — DER em DBML (cole em dbdiagram.io para gerar o diagrama);
 - `03-dicionario-de-dados.md` — definição de atributos e significado de negócio;
 - `04-modelo-logico.md` — tradução DER → relacional e verificação de 3FN;
-- `05-justificativas-tecnicas.md` — justificativas formais de decisões de modelagem.
+- `05-justificativas-tecnicas.md` — justificativas formais de decisões de modelagem;
+- `06-lgpd.md` — dados pessoais tratados, bases legais, retenção, direitos do
+  titular e como o sistema atende cada um.
 
 ## Como executar com Docker Compose (recomendado)
 
@@ -224,19 +231,20 @@ Scripts disponíveis no backend:
 
 ## Testes automatizados
 
-`backend/tests/e2e/` traz 76 testes que conversam com a API por HTTP, como o
+`backend/tests/e2e/` traz 83 testes que conversam com a API por HTTP, como o
 frontend fará, contra um PostgreSQL de verdade — exercitam de uma vez rotas,
 validações, regras de negócio, triggers e constraints do banco:
 
-| Arquivo                | O que verifica                                                                                |
-| ---------------------- | --------------------------------------------------------------------------------------------- |
-| `seguranca.test.ts`    | login, tokens forjados, permissões por cargo, bloqueio de tentativas, entradas malformadas    |
-| `cadastros.test.ts`    | paginação, validações, produto × combo, desativação, cargos e vínculos, promoções             |
-| `pedidos.test.ts`      | registro, preço congelado, status, entrega, pagamentos, estorno, relatórios                   |
-| `concorrencia.test.ts` | 10 requisições simultâneas iguais: só uma pode ter efeito                                     |
-| `estoque.test.ts`      | estoque mínimo, filtro de reposição e baixa automática pela ficha técnica                     |
-| `eventos.test.ts`      | tempo real: o fluxo de eventos exige login e avisa pedido criado e mudança de status          |
-| `fotos.test.ts`        | foto do produto: envio pelo gerente, leitura pública, só imagem de verdade, limite de tamanho |
+| Arquivo                | O que verifica                                                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `seguranca.test.ts`    | login, tokens forjados, permissões por cargo, bloqueio de tentativas, entradas malformadas, cabeçalhos de segurança e cache |
+| `cadastros.test.ts`    | paginação, validações, produto × combo, desativação, cargos e vínculos, promoções                                           |
+| `pedidos.test.ts`      | registro, preço congelado, status, entrega, pagamentos, estorno, relatórios                                                 |
+| `concorrencia.test.ts` | 10 requisições simultâneas iguais: só uma pode ter efeito                                                                   |
+| `estoque.test.ts`      | estoque mínimo, filtro de reposição e baixa automática pela ficha técnica                                                   |
+| `eventos.test.ts`      | tempo real: o fluxo de eventos exige login, avisa pedido criado e mudança de status, limita conexões por login              |
+| `fotos.test.ts`        | foto do produto: envio pelo gerente, leitura pública, só imagem de verdade, limite de tamanho                               |
+| `lgpd.test.ts`         | LGPD: exportação dos dados do cliente, anonimização, pedido em andamento, exclusão                                          |
 
 Com a API no ar (local ou no Docker) e o banco criado pelos scripts de
 `database/init/`:
@@ -289,9 +297,9 @@ branch, e mostra ✔ ou ✖ ao lado do commit:
 
 | Job            | O que confere                                                                                                                                                                    |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend        | formatação, lint, compilação, e os 76 testes da API contra um PostgreSQL criado pelos scripts de `database/init/`                                                                |
+| Backend        | formatação, lint, compilação, e os 83 testes da API contra um PostgreSQL criado pelos scripts de `database/init/`                                                                |
 | Frontend       | formatação, lint, testes unitários e build                                                                                                                                       |
-| Docker Compose | `docker compose up` do zero (com senha de banco cheia de caracteres especiais), espera ficar `healthy`, confere que as telas são servidas e roda os 76 testes contra o container |
+| Docker Compose | `docker compose up` do zero (com senha de banco cheia de caracteres especiais), espera ficar `healthy`, confere que as telas são servidas e roda os 83 testes contra o container |
 
 Quando um passo falha, a aba **Actions** mostra qual e por quê; o comando do
 passo é o mesmo que você roda localmente.
@@ -315,13 +323,21 @@ com as seções e a lista de conferência.
   detalhe, cozinha, entregas, mesas, clientes, cardápio, estoque,
   relatórios) e as que faltavam (equipe, ajustes, histórico do entregador,
   perfil); servido pelo backend no Docker;
-- ✅ CI no GitHub Actions (lint, formatação, testes, Docker Compose);
+- ✅ Estoque mínimo com baixa automática, fotos dos produtos e
+  atualização em tempo real (cozinha, pedidos, mesas, entregas);
+- ✅ LGPD: aviso de privacidade, exportação e exclusão/anonimização dos dados
+  do cliente (ver `docs/06-lgpd.md`);
+- ✅ Segurança: CSP restrita, cabeçalhos, limites, container só leitura,
+  sem vulnerabilidades conhecidas no `npm audit`; página 404 e `robots.txt`;
+- ✅ CI no GitHub Actions (lint, formatação, testes, Docker Compose).
 
 ## Autenticação e permissões
 
 Todas as rotas da API começam com **`/api`** (o restante dos endereços fica
-para as telas do frontend). Toda a API exige login, exceto `GET /api/health`
-e `POST /api/auth/login`.
+para as telas do frontend). Toda a API exige login, exceto `GET /api/health`,
+`POST /api/auth/login` e `GET /api/produtos/:id/foto` (a tag `<img>` não
+envia o token). Nas telas, só `/login`, `/privacidade` e a página 404 abrem
+sem login.
 
 ```bash
 # 1. Entrar
@@ -348,6 +364,7 @@ curl http://localhost:3000/api/produtos -H "Authorization: Bearer eyJ..."
 | Registrar e operar pedidos; cadastrar e editar clientes                           | qualquer funcionário logado |
 | Criar, alterar ou remover cadastros (cardápio, estoque, equipe, mesas, cupons...) | gerente                     |
 | Relatórios                                                                        | gerente                     |
+| Exportar ou excluir os dados pessoais de um cliente (LGPD)                        | gerente                     |
 
 Respostas de erro de acesso: `401` (sem login, token inválido ou expirado),
 `403` (logado, mas sem o cargo necessário), `429` (muitas requisições).
@@ -372,7 +389,7 @@ pequenas por natureza e voltam como lista simples.
 | --------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | —         | `GET /api/health`                        | Público. `200` se a API e o banco respondem; `503` se o banco está fora                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Acesso    | `/auth`                                  | `POST /login`, `GET /me` (quem sou eu e meus cargos), `PATCH /senha` (trocar a própria senha)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| Cadastros | `/clientes`                              | `?busca=` (nome, telefone ou e-mail). Cada cliente da lista traz `totalPedidos` e `ultimoPedidoEm`; o detalhe traz `resumo` (`totalPedidos`, `totalGasto`, `ticketMedio`, `notaMedia`). `GET /clientes/:id/pedidos` — histórico de pedidos do cliente                                                                                                                                                                                                                                                                                                                                                     |
+| Cadastros | `/clientes`                              | `?busca=` (nome, telefone ou e-mail). Cada cliente da lista traz `totalPedidos` e `ultimoPedidoEm`; o detalhe traz `resumo` (`totalPedidos`, `totalGasto`, `ticketMedio`, `notaMedia`). `GET /clientes/:id/pedidos` — histórico de pedidos do cliente. LGPD (gerente): `GET /clientes/:id/dados` (cadastro e todos os pedidos, para baixar) e `POST /clientes/:id/anonimizacao` (apaga os dados pessoais de quem tem pedidos; `DELETE` continua apagando quem não tem). Cliente anonimizado some da busca e não recebe pedido novo                                                                        |
 | Cadastros | `/funcionarios`                          | Filtros `?ativo=` e `?cargo=entregador`; aceita `login`/`senha` (`login: null` remove o acesso). Sub-rota `/funcionarios/:funcionarioId/cargos`: `POST` abre vínculo, `GET` histórico, `PATCH /:vinculoId` encerra                                                                                                                                                                                                                                                                                                                                                                                        |
 | Cadastros | `/cargos`, `/mesas`, `/formas-pagamento` | `/mesas?ativa=`; cada mesa traz `pedidoAberto` (pedido de hoje ainda em andamento ou com saldo a pagar; `null` = livre). Os quatro cargos-base não podem ser alterados                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Cardápio  | `/categorias`                            | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
@@ -475,6 +492,11 @@ bloco `totais` (`subtotalItens`, `descontoCupom`, `taxaEntrega`, `total`,
   instável, servidor reiniciando), as telas voltam a consultar a API a cada
   10–30 s e reconectam sozinhas. O canal fica na memória do container: com
   várias réplicas do backend seria preciso um canal compartilhado.
+- **LGPD**: cliente sem pedidos é apagado; com pedidos, é anonimizado —
+  saem nome, telefone, e-mail, endereço, rua/número/CEP das entregas,
+  observações e comentários; ficam itens, valores, datas, bairro e cidade
+  (registro de vendas). Não anonimiza com pedido em andamento. Detalhes em
+  `docs/06-lgpd.md`.
 - **Datas**: "hoje" segue o fuso do negócio (`APP_TIMEZONE`, padrão
   `America/Sao_Paulo`), não o do servidor.
 
@@ -487,11 +509,31 @@ bloco `totais` (`subtotalItens`, `descontoCupom`, `taxaEntrega`, `total`,
   antigos.
 - **Limites**: 600 requisições por minuto por IP e 10 tentativas de login
   erradas por login a cada 15 minutos (ajustáveis por variável de ambiente).
+- **Login**: a mesma mensagem e o mesmo tempo de resposta para login
+  inexistente, senha errada ou funcionário desativado (não revela quais
+  logins existem); o token só aceita o algoritmo HS256.
 - **Logs**: uma linha JSON por requisição (`docker compose logs backend`),
   com um id que também volta no cabeçalho `X-Request-Id` e no corpo dos erros
-  500 — sem corpo de requisição, senha ou token.
+  500 — sem query string, corpo de requisição, senha ou token. A linha leva o
+  id do funcionário, o que registra quem exportou ou excluiu dados (LGPD).
+- **Cabeçalhos**: Content-Security-Policy só com o próprio servidor (sem
+  CDN; `frame-ancestors 'none'` contra clickjacking), `X-Content-Type-Options`,
+  `Referrer-Policy`, `Permissions-Policy` (câmera, microfone, localização e
+  pagamento desligados) e `X-Robots-Tag: noindex`. A API responde com
+  `Cache-Control: no-store`: dado pessoal não fica em cache.
+- **Entradas**: tudo validado com Zod (tipos, tamanhos, faixas do banco);
+  corpo JSON até 100 KB, foto até 512 KB e conferida pelos primeiros bytes;
+  consultas parametrizadas (sem SQL montado com texto do usuário).
+- **Tempo real**: no máximo 10 conexões de eventos abertas por login.
 - **Container**: a imagem do backend roda como usuário sem privilégios e não
-  leva ferramentas de build.
+  leva ferramentas de build; no compose, o sistema de arquivos é só leitura
+  (só `/tmp` em memória), sem capacidades do Linux e sem ganho de
+  privilégio. O banco não publica porta: só o backend o alcança.
+- **Dependências**: `npm audit` sem vulnerabilidades conhecidas (as do CLI do
+  Prisma resolvidas com `overrides` no `backend/package.json`); o Dependabot
+  abre PRs semanais com as atualizações.
+- **Buscadores**: `robots.txt` com `Disallow: /`, meta `noindex` e o
+  cabeçalho acima — o sistema é interno.
 
 Limitações conhecidas (aceitáveis para o servidor local da sala): o tráfego é
 HTTP, sem criptografia — em uma rede não confiável seria preciso HTTPS na

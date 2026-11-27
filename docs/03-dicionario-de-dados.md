@@ -27,6 +27,7 @@ gravado não depende do fuso horário do servidor.
 | endereco_padrao_cidade | VARCHAR | 100 | — | Não | Cidade do endereço padrão |
 | endereco_padrao_cep | VARCHAR | 9 | — | Não | CEP do endereço padrão |
 | criado_em | TIMESTAMPTZ | — | — | Sim | Data/hora do cadastro do cliente |
+| anonimizado_em | TIMESTAMPTZ | — | — | Não | LGPD: quando os dados pessoais foram apagados a pedido do cliente (nome vira "Cliente anonimizado"; telefone, e-mail e endereço ficam vazios). Nulo = cadastro normal. Ver `06-lgpd.md` |
 
 Regra de negócio aplicada na camada de aplicação (não em constraint de
 schema): cadastro completo (nome, contato, endereço) só é exigido quando o

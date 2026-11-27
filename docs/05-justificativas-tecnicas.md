@@ -150,3 +150,33 @@ preço-praticado-numa-venda-específica são **dois fatos diferentes**, cada
 um pertencente à sua própria linha do tempo, e por isso merecem colunas
 separadas em tabelas separadas — prática padrão em qualquer sistema
 transacional de vendas.
+
+## 6. Anonimização em vez de exclusão do cliente (LGPD)
+
+**Regra (LGPD, art. 16 e 18, IV e VI):** o titular pode pedir a eliminação
+dos seus dados; a lanchonete, por outro lado, precisa guardar o registro de
+vendas e de caixa.
+
+**Decisão:** cliente sem pedidos é apagado (`DELETE`). Cliente com pedidos
+ganha `anonimizado_em` e tem os dados que o identificam apagados — no
+cadastro (nome, telefone, e-mail, endereço) e nos pedidos dele (rua,
+número e CEP da entrega, observações, comentário da avaliação). A linha de
+`cliente` continua existindo como referência dos pedidos.
+
+**Por quê:** apagar a linha quebraria a FK `pedido.cliente_id` (ou exigiria
+`ON DELETE SET NULL`, perdendo a informação de que aqueles pedidos eram do
+mesmo cliente, útil nas estatísticas). Anonimizar cumpre a lei — o dado
+deixa de identificar a pessoa (art. 5º, III) — sem perder o registro de
+vendas. Bairro e cidade ficam porque, sozinhos, não identificam ninguém e
+alimentam as estatísticas de entrega. Detalhes em `06-lgpd.md`.
+
+## 7. Foto do produto em tabela própria, guardada no banco
+
+**Decisão:** `produto_foto` (1:1 opcional com `produto`) com a imagem em
+`BYTEA`, até 512 KB, em vez de uma coluna em `produto` ou de arquivos no
+disco do container.
+
+**Por quê:** numa coluna de `produto`, toda listagem do cardápio carregaria
+os bytes das imagens. Em arquivos no disco, o container precisaria de um
+volume e o backup do banco não levaria as fotos. Na tabela própria, o
+backup do Postgres é completo e o container do backend continua só leitura.

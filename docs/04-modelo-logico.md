@@ -140,7 +140,7 @@ controlada e documentada (`pedido.status_atual`).
 
 ```
 cliente(id, nome, telefone, email, endereco_padrao_logradouro, endereco_padrao_numero,
-        endereco_padrao_bairro, endereco_padrao_cidade, endereco_padrao_cep, criado_em)
+        endereco_padrao_bairro, endereco_padrao_cidade, endereco_padrao_cep, criado_em, anonimizado_em)
 
 mesa(id, numero, ativa)
 
