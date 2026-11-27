@@ -139,7 +139,8 @@ produtos que o compõem. Restrição: UNIQUE (adicional_id, categoria_id).
 | --- | --- | --- | --- | --- | --- |
 | id | INTEGER | — | PK | Sim | Identificador único do ingrediente |
 | nome | VARCHAR | 100 | — | Sim | Nome do ingrediente/insumo |
-| quantidade_estoque | DECIMAL | 10,3 | — | Sim | Quantidade atualmente disponível em estoque, na unidade_medida definida |
+| quantidade_estoque | DECIMAL | 10,3 | — | Sim | Quantidade atualmente disponível em estoque, na unidade_medida definida. Baixa sozinha pela ficha técnica quando um pedido entra em preparo (nunca fica negativa) |
+| estoque_minimo | DECIMAL | 10,3 | — | Sim | Ponto de reposição: com o estoque nele ou abaixo, o ingrediente aparece para repor. Padrão 0 (sem alerta) |
 | unidade_medida | VARCHAR | 10 | — | Sim | Unidade de medida do estoque: `kg`, `litro` ou `unidade` |
 | fornecedor_id | INTEGER | — | FK → fornecedor.id | Sim | Fornecedor responsável pelo abastecimento deste ingrediente |
 

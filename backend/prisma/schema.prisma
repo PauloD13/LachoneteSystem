@@ -167,6 +167,7 @@ model Ingrediente {
   id                Int     @id @default(autoincrement())
   nome              String  @db.VarChar(100)
   quantidadeEstoque Decimal @default(0) @map("quantidade_estoque") @db.Decimal(10, 3)
+  estoqueMinimo     Decimal @default(0) @map("estoque_minimo") @db.Decimal(10, 3)
   unidadeMedida     String  @map("unidade_medida") @db.VarChar(10)
   fornecedorId      Int     @map("fornecedor_id")
 

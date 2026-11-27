@@ -114,6 +114,7 @@ Table ingrediente {
   id integer [pk, increment]
   nome varchar [not null]
   quantidade_estoque decimal(10,3) [not null, default: 0]
+  estoque_minimo decimal(10,3) [not null, default: 0, note: 'ponto de reposição; 0 = sem alerta']
   unidade_medida varchar [not null, note: 'kg | litro | unidade']
   fornecedor_id integer [not null, ref: > fornecedor.id]
 }

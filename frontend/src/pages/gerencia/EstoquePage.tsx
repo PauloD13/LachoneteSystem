@@ -19,11 +19,15 @@ import type {
   UnidadeMedida,
 } from "../../types/dominio";
 
-/** Tela 13 — Estoque: ingredientes (menor estoque primeiro) e fornecedores. */
+/**
+ * Tela 13 — Estoque: ingredientes (menor estoque primeiro), alerta de
+ * reposição pelo estoque mínimo e fornecedores.
+ */
 export function EstoquePage() {
   // Menor estoque primeiro: o que está acabando aparece no topo.
   const [ordem, setOrdem] = useState<"estoque" | "nome">("estoque");
   const [busca, setBusca] = useState("");
+  const [soRepor, setSoRepor] = useState(false);
   const [pagina, setPagina] = useState(1);
   const [ingrediente, setIngrediente] = useState<Ingrediente | "novo" | null>(
     null,
@@ -34,12 +38,25 @@ export function EstoquePage() {
   const termo = busca.trim();
 
   // Trocar a ordem ou a busca volta para a página 1 (ver setPagina(1) abaixo).
-  const ings = useConsulta(`estoque:${ordem}:${termo}:${pagina}`, (s) =>
-    ingredientes.listar(
-      { ordem, busca: termo || undefined, pagina, tamanhoPagina: 20 },
-      s,
-    ),
+  const ings = useConsulta(
+    `estoque:${ordem}:${termo}:${soRepor}:${pagina}`,
+    (s) =>
+      ingredientes.listar(
+        {
+          ordem,
+          busca: termo || undefined,
+          repor: soRepor || undefined,
+          pagina,
+          tamanhoPagina: 20,
+        },
+        s,
+      ),
   );
+  // Só o total interessa: é o contador do alerta.
+  const aRepor = useConsulta("estoque:repor", (s) =>
+    ingredientes.listar({ repor: true, tamanhoPagina: 1 }, s),
+  );
+  const totalARepor = aRepor.dados?.paginacao.total ?? 0;
   const forns = useConsulta("estoque:fornecedores", (s) =>
     fornecedores.listar({ tamanhoPagina: 100 }, s),
   );
@@ -56,6 +73,7 @@ export function EstoquePage() {
             {ings.dados && forns.dados
               ? `${ings.dados.paginacao.total} ingredientes · ${forns.dados.paginacao.total} fornecedores`
               : " "}
+            {totalARepor > 0 && ` · ${totalARepor} para repor`}
           </span>
         </div>
         <Botao
@@ -74,7 +92,20 @@ export function EstoquePage() {
             <h2 id="h-ing" className="ui-titulo-secao">
               Ingredientes
             </h2>
-            <div className="ui-linha" role="group" aria-label="Ordenar">
+            <div
+              className="ui-linha ui-linha--quebra"
+              role="group"
+              aria-label="Filtrar e ordenar"
+            >
+              <Chip
+                selecionado={soRepor}
+                onClick={() => {
+                  setSoRepor((v) => !v);
+                  setPagina(1);
+                }}
+              >
+                Repor{totalARepor > 0 ? ` · ${totalARepor}` : ""}
+              </Chip>
               <Chip
                 selecionado={ordem === "estoque"}
                 onClick={() => {
@@ -117,7 +148,9 @@ export function EstoquePage() {
             <Vazio icone="estoque">
               {forns.dados?.dados.length === 0
                 ? "Cadastre um fornecedor primeiro; depois, os ingredientes."
-                : "Nenhum ingrediente."}
+                : soRepor
+                  ? "Nada para repor: tudo acima do estoque mínimo."
+                  : "Nenhum ingrediente."}
             </Vazio>
           ) : (
             <>
@@ -139,13 +172,21 @@ export function EstoquePage() {
                         onClick={() => setIngrediente(i)}
                       >
                         <td>
-                          <button
-                            type="button"
-                            className="ui-linha-botao"
-                            onClick={() => setIngrediente(i)}
-                          >
-                            {i.nome}
-                          </button>
+                          <span className="ui-linha" style={{ gap: 8 }}>
+                            <button
+                              type="button"
+                              className="ui-linha-botao"
+                              onClick={() => setIngrediente(i)}
+                            >
+                              {i.nome}
+                            </button>
+                            {i.repor && (
+                              <span className="ui-selo-alerta">
+                                <Icone nome="alerta" tamanho={14} />
+                                Repor
+                              </span>
+                            )}
+                          </span>
                         </td>
                         <td
                           className="ui-direita sc-tnum"
@@ -159,6 +200,14 @@ export function EstoquePage() {
                         >
                           {quantidade(i.quantidadeEstoque)}{" "}
                           {ROTULO_UNIDADE[i.unidadeMedida]}
+                          {Number(i.estoqueMinimo) > 0 && (
+                            <span
+                              className="ui-texto-sm ui-suave"
+                              style={{ display: "block", fontWeight: 600 }}
+                            >
+                              mín. {quantidade(i.estoqueMinimo)}
+                            </span>
+                          )}
                         </td>
                         <td className="ui-suave">{i.fornecedor.nome}</td>
                         <td className="ui-direita sc-tnum">
@@ -174,8 +223,9 @@ export function EstoquePage() {
             </>
           )}
           <p className="ui-texto-sm ui-suave">
-            Não há estoque mínimo cadastrado: a lista mostra primeiro o que está
-            acabando. O consumo estimado sai em Relatórios.
+            O estoque baixa sozinho pela ficha técnica quando um pedido entra em
+            preparo. Com o estoque mínimo preenchido, o ingrediente pede
+            reposição ao chegar nele. O consumo do período sai em Relatórios.
           </p>
         </section>
 
@@ -246,6 +296,7 @@ export function EstoquePage() {
             aoConcluir={() => {
               setIngrediente(null);
               ings.recarregar();
+              aRepor.recarregar();
               forns.recarregar();
             }}
           />
@@ -293,6 +344,11 @@ function FormIngrediente({
   const [qtd, setQtd] = useState(
     ingrediente ? quantidade(ingrediente.quantidadeEstoque) : "",
   );
+  const [minimo, setMinimo] = useState(
+    ingrediente && Number(ingrediente.estoqueMinimo) > 0
+      ? quantidade(ingrediente.estoqueMinimo)
+      : "",
+  );
   const [unidade, setUnidade] = useState<UnidadeMedida>(
     ingrediente?.unidadeMedida ?? "unidade",
   );
@@ -306,6 +362,7 @@ function FormIngrediente({
     const corpo = {
       nome: nome.trim(),
       quantidadeEstoque: numeroDoCampo(qtd || "0"),
+      estoqueMinimo: numeroDoCampo(minimo || "0"),
       unidadeMedida: unidade,
       fornecedorId: Number(fornecedorId),
     };
@@ -338,6 +395,18 @@ function FormIngrediente({
             className="sc-input sc-tnum"
             value={qtd}
             onChange={(e) => setQtd(e.target.value)}
+          />
+        </Campo>
+        <Campo
+          rotulo="Estoque mínimo (opcional)"
+          erro={erros.estoqueMinimo}
+          ajuda="Abaixo disso, o ingrediente aparece em Repor."
+        >
+          <input
+            inputMode="decimal"
+            className="sc-input sc-tnum"
+            value={minimo}
+            onChange={(e) => setMinimo(e.target.value)}
           />
         </Campo>
         <Campo rotulo="Unidade">

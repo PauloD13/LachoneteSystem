@@ -98,6 +98,8 @@ export const ingredientes = criarRecurso<
     busca?: string;
     /** estoque = menor estoque primeiro. */
     ordem?: "nome" | "estoque";
+    /** true: só os que estão no estoque mínimo ou abaixo. */
+    repor?: boolean;
   }
 >("/ingredientes");
 

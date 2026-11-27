@@ -277,6 +277,10 @@ export interface Ingrediente {
   id: number;
   nome: string;
   quantidadeEstoque: Decimal;
+  /** Ponto de reposição; "0" = sem alerta. */
+  estoqueMinimo: Decimal;
+  /** Estoque no mínimo ou abaixo dele. */
+  repor: boolean;
   unidadeMedida: UnidadeMedida;
   fornecedorId: number;
   fornecedor: { id: number; nome: string };
@@ -289,6 +293,7 @@ export interface Ingrediente {
 export interface IngredienteEntrada {
   nome: string;
   quantidadeEstoque?: number;
+  estoqueMinimo?: number;
   unidadeMedida: UnidadeMedida;
   fornecedorId: number;
 }

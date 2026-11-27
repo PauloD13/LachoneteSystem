@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  booleanoNaUrl,
   idNaUrl,
   idNoCorpo,
   paginacaoQuerySchema,
@@ -13,6 +14,8 @@ export const criarIngredienteSchema = z.object({
     .min(2, "O nome deve ter pelo menos 2 caracteres.")
     .max(100, "O nome deve ter no máximo 100 caracteres."),
   quantidadeEstoque: quantidadeDecimal.optional(),
+  // Ponto de reposição (0 = sem alerta).
+  estoqueMinimo: quantidadeDecimal.optional(),
   unidadeMedida: z.enum(["kg", "litro", "unidade"], {
     error: "unidadeMedida deve ser kg, litro ou unidade.",
   }),
@@ -24,6 +27,8 @@ export const atualizarIngredienteSchema = criarIngredienteSchema.partial();
 export const listarIngredientesQuerySchema = paginacaoQuerySchema.extend({
   fornecedorId: idNaUrl.optional(),
   busca: z.string().trim().min(1).max(100).optional(),
+  // true: só os que estão no estoque mínimo ou abaixo dele.
+  repor: booleanoNaUrl.optional(),
   // nome (padrão) ou estoque (menor estoque primeiro).
   ordem: z
     .enum(["nome", "estoque"], { error: "ordem deve ser nome ou estoque." })

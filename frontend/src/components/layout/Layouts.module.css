@@ -160,3 +160,15 @@
     padding: 20px 16px;
   }
 }
+
+/* Contador no item do menu (ex.: ingredientes para repor). */
+.contador {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--status-cancelado-bg);
+  color: var(--status-cancelado-fg);
+  font: 800 12px/22px var(--font-sans);
+  text-align: center;
+}

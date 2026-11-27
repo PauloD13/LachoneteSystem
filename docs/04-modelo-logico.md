@@ -160,7 +160,7 @@ adicional_categoria(id, adicional_id→adicional, categoria_id→categoria)   --
 
 fornecedor(id, nome, telefone, email)
 
-ingrediente(id, nome, quantidade_estoque, unidade_medida, fornecedor_id→fornecedor)
+ingrediente(id, nome, quantidade_estoque, estoque_minimo, unidade_medida, fornecedor_id→fornecedor)
 
 produto_ingrediente(id, produto_id→produto, ingrediente_id→ingrediente, quantidade_utilizada)
 

@@ -817,6 +817,52 @@ function validarTransicao(
   }
 }
 
+/**
+ * Baixa do estoque pela ficha técnica (regra 4.6), quando o pedido entra em
+ * preparo: é quando a cozinha usa os ingredientes. Produtos de combos contam
+ * (quantidade do item x quantidade no combo); variações e adicionais não têm
+ * ficha. Cancelar depois não devolve: o lanche já foi feito.
+ *
+ * O estoque não fica negativo (CHECK do banco): para em zero, e o alerta de
+ * estoque mínimo mostra o que repor. Barrar o preparo por um estoque anotado
+ * errado pararia a cozinha.
+ */
+async function baixarEstoque(tx: Tx, pedidoId: number) {
+  const consumo = await tx.$queryRaw<
+    { ingredienteId: number; total: Prisma.Decimal }[]
+  >`
+    WITH produtos AS (
+      SELECT ip.item_vendavel_id AS produto_id, ip.quantidade
+      FROM item_pedido ip
+      JOIN produto pr ON pr.id = ip.item_vendavel_id
+      WHERE ip.pedido_id = ${pedidoId}
+      UNION ALL
+      SELECT ci.produto_id, ip.quantidade * ci.quantidade
+      FROM item_pedido ip
+      JOIN combo_item ci ON ci.combo_id = ip.item_vendavel_id
+      WHERE ip.pedido_id = ${pedidoId}
+    )
+    SELECT pi.ingrediente_id AS "ingredienteId",
+           SUM(p.quantidade * pi.quantidade_utilizada) AS total
+    FROM produtos p
+    JOIN produto_ingrediente pi ON pi.produto_id = p.produto_id
+    GROUP BY pi.ingrediente_id
+    ORDER BY pi.ingrediente_id`;
+  if (consumo.length === 0) return;
+
+  // Trava na ordem do id: dois pedidos entrando em preparo juntos não se
+  // bloqueiam em ordens cruzadas (deadlock).
+  const ids = consumo.map((c) => c.ingredienteId);
+  await tx.$queryRaw`
+    SELECT id FROM ingrediente WHERE id = ANY(${ids}) ORDER BY id FOR UPDATE`;
+  for (const { ingredienteId, total } of consumo) {
+    await tx.$executeRaw`
+      UPDATE ingrediente
+      SET quantidade_estoque = GREATEST(0, quantidade_estoque - ${total})
+      WHERE id = ${ingredienteId}`;
+  }
+}
+
 // Nunca altera o registro anterior: cada mudança é uma linha nova no
 // histórico, com seu horário (regra 4.3).
 export async function atualizarStatus(id: number, novo: StatusPedido) {
@@ -838,6 +884,7 @@ export async function atualizarStatus(id: number, novo: StatusPedido) {
       data: { pedidoId: id, status: novo },
     });
 
+    if (novo === "EM_PREPARO") await baixarEstoque(tx, id);
     if (atual.entrega && novo === "SAIU_PARA_ENTREGA") {
       await tx.entrega.update({
         where: { pedidoId: id },
