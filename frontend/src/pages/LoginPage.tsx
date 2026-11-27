@@ -1,10 +1,5 @@
 import { useState, type FormEvent } from "react";
-import {
-  Navigate,
-  useLocation,
-  useNavigate,
-  type Location,
-} from "react-router";
+import { Navigate, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import { useAvisos } from "../hooks/useAvisos";
 import { ErroDaApi, mensagemDeErro } from "../services/api";
@@ -12,6 +7,7 @@ import { Botao } from "../components/ui/Botao";
 import { Campo } from "../components/ui/Campo";
 import { Icone } from "../components/ui/Icone";
 import { primeiroNome, saudacao } from "../lib/formatadores";
+import { destinoAposEntrar, type Retorno } from "../lib/telaInicial";
 import estilos from "./LoginPage.module.css";
 
 /** Tela 1 — Login (todos os cargos). */
@@ -30,12 +26,11 @@ export function LoginPage() {
   }>({});
   const [enviando, setEnviando] = useState(false);
 
-  // Tela de onde o usuário foi mandado para o login (ver RotaProtegida);
-  // sem origem, "/" escolhe a tela inicial pelo cargo.
-  const destino =
-    (local.state as { de?: Location } | null)?.de?.pathname ?? "/";
+  // Tela de retorno, se a sessão de alguém expirou (ver RotaProtegida).
+  const retorno = local.state as Retorno | null;
 
-  if (usuario && !enviando) return <Navigate to={destino} replace />;
+  if (usuario && !enviando)
+    return <Navigate to={destinoAposEntrar(retorno, usuario)} replace />;
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -52,7 +47,7 @@ export function LoginPage() {
       avisos.sucesso(
         `${saudacao()}, ${primeiroNome(eu.nome)}! Seu turno começou.`,
       );
-      navegar(destino, { replace: true });
+      navegar(destinoAposEntrar(retorno, eu), { replace: true });
     } catch (falha) {
       const mensagem =
         falha instanceof ErroDaApi && falha.status === 401

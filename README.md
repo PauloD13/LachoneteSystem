@@ -142,6 +142,23 @@ banco via `database/init/`. `docker compose ps` mostra o backend como
 > docker compose up --build
 > ```
 
+### 4) Dados de demonstração (opcional)
+
+Para testar as telas com o sistema já preenchido, rode uma vez, num banco
+recém-criado:
+
+```bash
+API_URL=http://localhost:8080/api ADMIN_LOGIN=... ADMIN_SENHA=... node scripts/semear-demo.mjs
+```
+
+Ele cria, pela própria API, 4 funcionários (`ana` atendente, `bruno`
+cozinheiro, `carlos` e `diego` entregadores, todos com a senha
+`senha12345`), cardápio com variações, adicionais, combo, promoção e o cupom
+`BEMVINDO10`, 12 mesas, estoque com mínimos, 3 clientes e 7 pedidos em
+vários status. Rode os testes automatizados antes, num banco limpo: os dados
+de demonstração não atrapalham o uso, mas a suíte foi feita para um banco
+sem eles.
+
 ## Execução local para desenvolvimento (sem Docker)
 
 Útil no desenvolvimento: o backend roda na sua máquina com `npm run dev`
