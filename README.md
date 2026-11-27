@@ -1,6 +1,6 @@
 # LanchoneteSystem
 
-[![CI](https://github.com/PauloD13/LachoneteSystem/actions/workflows/ci.yml/badge.svg)](https://github.com/PauloD13/LachoneteSystem/actions/workflows/ci.yml)
+[![CI](https://github.com/PauloD13/LanchoneteSystem/actions/workflows/ci.yml/badge.svg)](https://github.com/PauloD13/LanchoneteSystem/actions/workflows/ci.yml)
 
 Sistema acadêmico de gestão para a **Lanchonete Sabor & Cia**, desenvolvido para aplicar modelagem de banco de dados (MER/DER/3FN) e implementação fullstack com deploy em Docker Compose.
 
@@ -44,7 +44,7 @@ LachoneteSystem/
 │       └── 002_seed.sql    # Dados iniciais: cargos, formas de pagamento, categorias
 ├── docs/                   # Artefatos de modelagem e justificativas
 ├── frontend/               # Telas: React + TypeScript + Vite (ver frontend/README.md)
-├── scripts/                # semear-demo.mjs (dados de demonstração) e utilitários
+├── scripts/                # semear-demo.mjs: dados de demonstração
 ├── docker-compose.yml      # Orquestra backend (API + telas) + PostgreSQL
 └── .env.example            # Variáveis de ambiente da stack
 ```

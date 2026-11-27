@@ -154,6 +154,8 @@ export function CategoriasAba() {
         confirmando="Excluindo…"
         perigo
         aoFechar={() => setExcluir(null)}
+        // Categoria com produtos é recusada pela API (409); o aviso de erro
+        // explica que é preciso mover os produtos antes.
         aoConfirmar={async () => {
           if (
             excluir &&

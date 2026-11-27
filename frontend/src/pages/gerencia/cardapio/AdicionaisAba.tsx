@@ -114,6 +114,8 @@ function EditorAdicional({
     const corpo = {
       nome: nome.trim(),
       preco: numeroDoCampo(preco),
+      // A lista inteira: ao editar, a API troca as categorias pelas marcadas,
+      // e o adicional só é oferecido em itens dessas categorias.
       categoriaIds: marcadas,
     };
     let salvo: Adicional | undefined;
@@ -128,6 +130,8 @@ function EditorAdicional({
     if (ok && salvo) aoSalvar(salvo);
   }
 
+  // Desativar em vez de excluir: adicional já vendido continua nos pedidos
+  // antigos, só deixa de ser oferecido.
   async function alternarAtivo() {
     if (!adicional) return;
     let salvo: Adicional | undefined;

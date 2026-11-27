@@ -6,11 +6,8 @@ import { encerrarEventos } from "./lib/eventos.js";
 import { prisma } from "./lib/prisma.js";
 import { garantirAdministradorInicial } from "./services/auth.service.js";
 
-//SECTION - Configurando porta (env ou default 3000)
-
 const port = environment.PORT;
 
-//SECTION - Iniciando servidor HTTP
 const server = app.listen(port, () => {
   logger.info("servidor no ar", {
     porta: port,

@@ -48,6 +48,9 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ): void {
+  // A ordem importa: do erro mais específico ao mais genérico. O último caso
+  // (500) só pega o que nenhum outro reconheceu.
+
   // 1. Erro de validação do Zod -> 400 Bad Request
   if (err instanceof ZodError) {
     const { fieldErrors, formErrors } = z.flattenError(err);

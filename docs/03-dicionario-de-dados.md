@@ -30,8 +30,9 @@ gravado não depende do fuso horário do servidor.
 | anonimizado_em | TIMESTAMPTZ | — | — | Não | LGPD: quando os dados pessoais foram apagados a pedido do cliente (nome vira "Cliente anonimizado"; telefone, e-mail e endereço ficam vazios). Nulo = cadastro normal. Ver `06-lgpd.md` |
 
 Regra de negócio aplicada na camada de aplicação (não em constraint de
-schema): cadastro completo (nome, contato, endereço) só é exigido quando o
-pedido é feito via app ou é delivery; pedidos de balcão não exigem cliente.
+schema): o cliente é exigido quando o pedido é feito via app, é delivery ou
+usa cupom (o cupom vale uma vez por cliente); delivery exige também o
+endereço. Pedidos de balcão sem cupom não exigem cliente.
 
 ## mesa
 
