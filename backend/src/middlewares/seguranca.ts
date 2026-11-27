@@ -6,14 +6,53 @@ import { environment } from "../config/env.js";
 // Cabeçalhos padrão do helmet (e sem "X-Powered-By"). HSTS e
 // "upgrade-insecure-requests" ficam desligados porque o deploy da sala é
 // HTTP: com eles o navegador trocaria http:// por https:// e o frontend não
-// carregaria. Com HTTPS na frente, basta remover as duas linhas. A CSP padrão
-// bloqueia <script> inline e CDNs; o frontend não usa nenhum dos dois.
-export const cabecalhosDeSeguranca = helmet({
+// carregaria. Com HTTPS na frente, basta remover as duas linhas.
+//
+// A CSP só libera o próprio servidor: fontes, scripts e imagens vêm todos
+// daqui (as fontes são empacotadas no build, sem CDN). frame-ancestors
+// 'none' impede que outro site abra o sistema num iframe para enganar o
+// clique (clickjacking).
+const helmetComCsp = helmet({
   hsts: false,
   contentSecurityPolicy: {
-    directives: { "upgrade-insecure-requests": null },
+    directives: {
+      "default-src": ["'self'"],
+      "script-src": ["'self'"],
+      "style-src": ["'self'", "'unsafe-inline'"],
+      "font-src": ["'self'", "data:"],
+      "img-src": ["'self'", "data:"],
+      "connect-src": ["'self'"],
+      "frame-ancestors": ["'none'"],
+      "form-action": ["'self'"],
+      "base-uri": ["'self'"],
+      "object-src": ["'none'"],
+      "upgrade-insecure-requests": null,
+    },
   },
 });
+
+// O sistema não usa câmera, microfone, localização nem pagamento do
+// navegador: o Permissions-Policy desliga esses recursos para qualquer
+// script. X-Robots-Tag: sistema interno, fora dos buscadores (ver também
+// robots.txt).
+const PERMISSOES =
+  "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
+
+export const cabecalhosDeSeguranca: RequestHandler = (req, res, next) => {
+  res.setHeader("Permissions-Policy", PERMISSOES);
+  res.setHeader("X-Robots-Tag", "noindex, nofollow");
+  helmetComCsp(req, res, next);
+};
+
+/**
+ * Respostas da API trazem dados pessoais (clientes, funcionários): nada de
+ * guardar em cache do navegador ou de proxies. A foto do produto define o
+ * próprio cache, depois deste cabeçalho.
+ */
+export const semCacheNaApi: RequestHandler = (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+};
 
 const semLimite: RequestHandler = (_req, _res, next) => next();
 

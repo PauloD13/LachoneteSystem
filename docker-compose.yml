@@ -21,6 +21,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    # Nenhum processo do container ganha privilégios novos (setuid etc.).
+    security_opt:
+      - no-new-privileges:true
 
   backend:
     # O Dockerfile do backend também compila o frontend, por isso o contexto
@@ -30,6 +33,17 @@ services:
       dockerfile: backend/Dockerfile
     # Se o processo cair (ou o servidor da sala reiniciar), o Docker sobe de novo.
     restart: unless-stopped
+    # Endurecimento: o código da API não muda em produção, então o sistema
+    # de arquivos é só leitura (só /tmp é gravável, na memória); nenhuma
+    # capacidade especial do Linux; nenhum ganho de privilégio. Um invasor
+    # que achasse uma falha na API não conseguiria gravar nem escalar.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     environment:
       # Conexão com o banco em partes separadas: é o backend (config/env.ts)
       # que monta a URL, escapando a senha. Assim a senha pode conter @ : / #

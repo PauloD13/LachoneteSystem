@@ -14,6 +14,10 @@ const canal = new EventEmitter();
 canal.setMaxListeners(0); // uma assinatura por aparelho conectado
 
 const conexoes = new Set<Response>();
+// Conexões abertas por funcionário: um aparelho usa uma só (as telas dividem
+// a mesma). O teto impede que um login abra milhares e esgote o servidor.
+const MAXIMO_POR_USUARIO = 10;
+const porUsuario = new Map<number, number>();
 
 /** Avisa todas as telas conectadas de que um pedido mudou. */
 export function publicarPedido(evento: EventoDePedido): void {
@@ -26,6 +30,16 @@ export function publicarPedido(evento: EventoDePedido): void {
  * a conexão viva em proxies e roteadores que derrubam conexões ociosas.
  */
 export function transmitirEventos(req: Request, res: Response): void {
+  const usuarioId = req.usuario?.id ?? 0;
+  const abertas = porUsuario.get(usuarioId) ?? 0;
+  if (abertas >= MAXIMO_POR_USUARIO) {
+    res.status(429).json({
+      error: "Conexões demais abertas com este login. Feche outras abas.",
+    });
+    return;
+  }
+  porUsuario.set(usuarioId, abertas + 1);
+
   res.writeHead(200, {
     "Content-Type": "text/event-stream; charset=utf-8",
     "Cache-Control": "no-cache, no-transform",
@@ -46,6 +60,9 @@ export function transmitirEventos(req: Request, res: Response): void {
     clearInterval(batida);
     canal.off("pedido", enviar);
     conexoes.delete(res);
+    const restantes = (porUsuario.get(usuarioId) ?? 1) - 1;
+    if (restantes > 0) porUsuario.set(usuarioId, restantes);
+    else porUsuario.delete(usuarioId);
   });
 }
 

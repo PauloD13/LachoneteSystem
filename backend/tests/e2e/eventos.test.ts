@@ -84,4 +84,19 @@ describe("eventos em tempo real", () => {
       fluxo.fechar();
     }
   });
+
+  it("limita as conexões abertas por login", async () => {
+    const entregador = await criarFuncionario("entregador");
+    const abertas = [];
+    try {
+      for (let i = 0; i < 10; i++)
+        abertas.push(await conectar(entregador.token));
+      const resposta = await fetch(`${API_URL}/eventos`, {
+        headers: { authorization: `Bearer ${entregador.token}` },
+      });
+      assert.equal(resposta.status, 429);
+    } finally {
+      abertas.forEach((c) => c.fechar());
+    }
+  });
 });
