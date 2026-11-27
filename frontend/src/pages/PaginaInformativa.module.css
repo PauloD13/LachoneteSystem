@@ -1,0 +1,84 @@
+/* Páginas públicas de leitura: aviso de privacidade e "não encontrada". */
+
+.pagina {
+  min-height: 100dvh;
+  display: grid;
+  place-items: start center;
+  padding: 32px 16px 48px;
+  background: var(--surface-100);
+}
+
+.cartao {
+  width: min(720px, 100%);
+  gap: 12px;
+  padding: 28px 24px;
+  font: 500 16px/26px var(--font-sans);
+}
+
+.cartao h2 {
+  margin-top: 12px;
+  font: 800 18px/24px var(--font-sans);
+}
+
+.cartao ul {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+
+.marca {
+  font: 600 18px/24px var(--font-display);
+  color: var(--brand);
+}
+
+.titulo {
+  font: 600 32px/38px var(--font-display);
+}
+
+.acoes {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Página não encontrada */
+
+.centro {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+  background: var(--surface-100);
+}
+
+.erro {
+  width: min(480px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.codigo {
+  font: 600 96px/1 var(--font-display);
+  color: var(--brand);
+  letter-spacing: -2px;
+}
+
+.erro p {
+  font: 500 16px/24px var(--font-sans);
+  color: var(--ink-muted);
+}
+
+.prato {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 28px;
+  background: var(--surface-200);
+  box-shadow: var(--shadow-card);
+  color: var(--ink-muted);
+}

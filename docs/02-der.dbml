@@ -25,6 +25,7 @@ Table cliente {
   endereco_padrao_cidade varchar
   endereco_padrao_cep varchar
   criado_em timestamptz [not null, default: `now()`]
+  anonimizado_em timestamptz [note: 'LGPD: dados pessoais apagados a pedido do titular; nulo = cadastro normal']
 
   Note: 'Cadastro obrigatório apenas p/ pedidos via app ou delivery (regra aplicada no backend, não no schema). Endereço aqui é só o "padrão" sugerido; o endereço real de cada entrega fica em entrega.*'
 }
@@ -56,6 +57,13 @@ Table produto {
   id integer [pk, ref: > item_vendavel.id]
   categoria_id integer [not null, ref: > categoria.id]
   descricao text
+}
+
+Table produto_foto {
+  produto_id integer [pk, ref: - produto.id, note: '1:1; apagar o produto apaga a foto']
+  tipo varchar(20) [not null, note: 'image/jpeg | image/png | image/webp']
+  dados bytea [not null, note: 'até 512 KB']
+  atualizado_em timestamptz [not null, default: `now()`]
 }
 
 Table combo {
@@ -114,6 +122,7 @@ Table ingrediente {
   id integer [pk, increment]
   nome varchar [not null]
   quantidade_estoque decimal(10,3) [not null, default: 0]
+  estoque_minimo decimal(10,3) [not null, default: 0, note: 'ponto de reposição; 0 = sem alerta']
   unidade_medida varchar [not null, note: 'kg | litro | unidade']
   fornecedor_id integer [not null, ref: > fornecedor.id]
 }

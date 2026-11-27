@@ -140,7 +140,7 @@ controlada e documentada (`pedido.status_atual`).
 
 ```
 cliente(id, nome, telefone, email, endereco_padrao_logradouro, endereco_padrao_numero,
-        endereco_padrao_bairro, endereco_padrao_cidade, endereco_padrao_cep, criado_em)
+        endereco_padrao_bairro, endereco_padrao_cidade, endereco_padrao_cep, criado_em, anonimizado_em)
 
 mesa(id, numero, ativa)
 
@@ -149,6 +149,7 @@ categoria(id, nome)
 item_vendavel(id, nome, preco, tipo, ativo)
 
 produto(id*, categoria_id→categoria, descricao)                          -- id também é FK p/ item_vendavel
+produto_foto(produto_id*→produto, tipo, dados, atualizado_em)              -- foto opcional, 1:1
 combo(id*, descricao)                                                     -- id também é FK p/ item_vendavel
 
 combo_item(id, combo_id→combo, produto_id→produto, quantidade)
@@ -160,7 +161,7 @@ adicional_categoria(id, adicional_id→adicional, categoria_id→categoria)   --
 
 fornecedor(id, nome, telefone, email)
 
-ingrediente(id, nome, quantidade_estoque, unidade_medida, fornecedor_id→fornecedor)
+ingrediente(id, nome, quantidade_estoque, estoque_minimo, unidade_medida, fornecedor_id→fornecedor)
 
 produto_ingrediente(id, produto_id→produto, ingrediente_id→ingrediente, quantidade_utilizada)
 

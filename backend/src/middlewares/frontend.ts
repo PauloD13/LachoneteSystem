@@ -11,6 +11,24 @@ import { logger } from "../lib/logger.js";
 //   qualquer outra rota -> index.html (o React Router decide a tela)
 // Em desenvolvimento não há build: as telas vêm do Vite, que repassa /api.
 
+// Primeiro trecho do endereço de cada tela (frontend/src/routes/AppRoutes.tsx).
+// Endereço fora desta lista recebe o mesmo index.html — o React mostra a
+// página "não encontrada" —, mas com status 404, como deve ser.
+const TELAS = new Set([
+  "",
+  "login",
+  "privacidade",
+  "inicio",
+  "pedidos",
+  "mesas",
+  "mais",
+  "clientes",
+  "cozinha",
+  "entregas",
+  "perfil",
+  "gerencia",
+]);
+
 /** Pasta das telas compiladas, ou `null` se não houver (desenvolvimento). */
 export function pastaDoFrontend(): string | null {
   const pasta = path.resolve(
@@ -45,7 +63,8 @@ export function servirFrontend(pasta: string): RequestHandler[] {
 
     // Sem cache: é o index.html que aponta para os arquivos do build atual.
     res.setHeader("Cache-Control", "no-cache");
-    res.sendFile(indice);
+    const tela = req.path.split("/")[1] ?? "";
+    res.status(TELAS.has(tela) ? 200 : 404).sendFile(indice);
   };
 
   return [arquivos, paginaDoApp];

@@ -375,7 +375,7 @@ export function FechamentoPage() {
               <Botao
                 variante="fantasma"
                 onClick={() => setFolha("mesa")}
-                style={{ minHeight: 40, background: "var(--surface-100)" }}
+                style={{ minHeight: 40, background: "var(--surface-inset)" }}
               >
                 {carrinho.mesa ? "Trocar mesa" : "Escolher mesa"}
               </Botao>

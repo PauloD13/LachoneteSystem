@@ -37,7 +37,11 @@ CREATE TABLE cliente (
     endereco_padrao_bairro      VARCHAR(100),
     endereco_padrao_cidade      VARCHAR(100),
     endereco_padrao_cep         VARCHAR(9),
-    criado_em                   TIMESTAMPTZ NOT NULL DEFAULT now()
+    criado_em                   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- LGPD (art. 16 e 18, IV): quando o cliente pede a exclusão e já tem
+    -- pedidos, os dados pessoais são apagados (anonimizados) e o cadastro fica
+    -- só como referência dos pedidos, que a lanchonete precisa guardar.
+    anonimizado_em              TIMESTAMPTZ
 );
 
 -- -----------------------------------------------------------------------------
@@ -78,6 +82,16 @@ CREATE TABLE produto (
     id            INTEGER PRIMARY KEY REFERENCES item_vendavel(id) ON DELETE CASCADE,
     categoria_id  INTEGER NOT NULL REFERENCES categoria(id) ON DELETE RESTRICT,
     descricao     TEXT
+);
+
+-- Foto do produto (opcional), no próprio banco: o backup do Postgres leva
+-- as fotos junto e o container não precisa de volume para arquivos. Fica
+-- numa tabela à parte para as listagens de produto não carregarem os bytes.
+CREATE TABLE produto_foto (
+    produto_id     INTEGER PRIMARY KEY REFERENCES produto(id) ON DELETE CASCADE,
+    tipo           VARCHAR(20) NOT NULL CHECK (tipo IN ('image/jpeg', 'image/png', 'image/webp')),
+    dados          BYTEA NOT NULL CHECK (octet_length(dados) BETWEEN 1 AND 524288),
+    atualizado_em  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE combo (
@@ -151,6 +165,9 @@ CREATE TABLE ingrediente (
     id                   INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nome                 VARCHAR(100) NOT NULL,
     quantidade_estoque   DECIMAL(10,3) NOT NULL DEFAULT 0 CHECK (quantidade_estoque >= 0),
+    -- Ponto de reposição: com o estoque nele ou abaixo, a tela de estoque
+    -- avisa para repor. 0 = sem alerta.
+    estoque_minimo       DECIMAL(10,3) NOT NULL DEFAULT 0 CHECK (estoque_minimo >= 0),
     unidade_medida       VARCHAR(10) NOT NULL CHECK (unidade_medida IN ('kg', 'litro', 'unidade')),
     fornecedor_id        INTEGER NOT NULL REFERENCES fornecedor(id) ON DELETE RESTRICT
 );

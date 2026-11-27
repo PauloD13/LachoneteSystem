@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AuthContexto } from "./auth-contexto";
 import type { ValorDaAutenticacao } from "./auth-contexto";
@@ -37,8 +37,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   // Só há o que conferir se existe um token salvo de uma visita anterior.
   const [carregando, setCarregando] = useState(() => lerTokenSalvo() !== null);
+  const [expirouDe, setExpirouDe] = useState<number | null>(null);
+  const usuarioAtual = useRef<Usuario | null>(null);
+  useEffect(() => {
+    usuarioAtual.current = usuario;
+  });
 
-  const sair = useCallback(() => {
+  const encerrar = useCallback((expirou: boolean) => {
+    setExpirouDe(expirou ? (usuarioAtual.current?.id ?? null) : null);
     salvarToken(null);
     // O pedido em montagem (CarrinhoProvider) não passa para o próximo usuário.
     try {
@@ -48,6 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUsuario(null);
   }, []);
+
+  const sair = useCallback(() => encerrar(false), [encerrar]);
+  const expirar = useCallback(() => encerrar(true), [encerrar]);
 
   // Ao abrir o sistema: se há um token salvo, pergunta ao backend se ele
   // ainda vale (e quais cargos o usuário tem HOJE).
@@ -72,9 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Qualquer resposta 401 no meio do uso (token expirou, funcionário foi
   // desativado, senha trocada em outro lugar) leva de volta ao login.
   useEffect(() => {
-    definirAoExpirarSessao(sair);
+    definirAoExpirarSessao(expirar);
     return () => definirAoExpirarSessao(null);
-  }, [sair]);
+  }, [expirar]);
 
   const entrar = useCallback(async (login: string, senha: string) => {
     const resposta = await auth.login(login, senha);
@@ -89,11 +98,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       carregando,
       entrar,
       sair,
+      expirouDe,
       temCargo: (...cargos: NomeDeCargo[]) =>
         usuario !== null &&
         cargos.some((cargo) => usuario.cargos.includes(cargo)),
     }),
-    [usuario, carregando, entrar, sair],
+    [usuario, carregando, entrar, sair, expirouDe],
   );
 
   return (

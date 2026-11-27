@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import * as produtoController from "../controllers/produto.controller.js";
 import { soGerente } from "../middlewares/autenticacao.js";
 import variacaoRoutes from "./variacao.routes.js";
@@ -12,6 +12,16 @@ produtoRoutes.get("/:id", produtoController.buscarPorId);
 produtoRoutes.post("/", soGerente, produtoController.criar);
 produtoRoutes.patch("/:id", soGerente, produtoController.atualizar);
 produtoRoutes.delete("/:id", soGerente, produtoController.remover);
+produtoRoutes.put(
+  "/:id/foto",
+  soGerente,
+  express.raw({
+    type: ["image/jpeg", "image/png", "image/webp"],
+    limit: "512kb",
+  }),
+  produtoController.enviarFoto,
+);
+produtoRoutes.delete("/:id/foto", soGerente, produtoController.removerFoto);
 
 // Sub-rotas: /produtos/:produtoId/variacoes e /produtos/:produtoId/ingredientes
 produtoRoutes.use("/:produtoId/variacoes", variacaoRoutes);

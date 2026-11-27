@@ -27,6 +27,7 @@ gravado não depende do fuso horário do servidor.
 | endereco_padrao_cidade | VARCHAR | 100 | — | Não | Cidade do endereço padrão |
 | endereco_padrao_cep | VARCHAR | 9 | — | Não | CEP do endereço padrão |
 | criado_em | TIMESTAMPTZ | — | — | Sim | Data/hora do cadastro do cliente |
+| anonimizado_em | TIMESTAMPTZ | — | — | Não | LGPD: quando os dados pessoais foram apagados a pedido do cliente (nome vira "Cliente anonimizado"; telefone, e-mail e endereço ficam vazios). Nulo = cadastro normal. Ver `06-lgpd.md` |
 
 Regra de negócio aplicada na camada de aplicação (não em constraint de
 schema): cadastro completo (nome, contato, endereço) só é exigido quando o
@@ -72,6 +73,17 @@ tabelas `produto` / `combo`, e `tipo` indica qual. A verificação acontece no
 | id | INTEGER | — | PK, FK → item_vendavel.id | Sim | Mesma PK do item_vendavel correspondente (herança 1:1) |
 | categoria_id | INTEGER | — | FK → categoria.id | Sim | Categoria à qual o produto pertence |
 | descricao | TEXT | — | — | Não | Descrição detalhada do produto (ingredientes, modo de preparo resumido) |
+
+## produto_foto
+
+Foto opcional do produto, guardada no próprio banco (o backup leva as fotos junto). Fica numa tabela à parte para as listagens de produto não carregarem os bytes.
+
+| Atributo | Tipo | Tam./Prec. | Chave | Obrigatório | Descrição |
+| --- | --- | --- | --- | --- | --- |
+| produto_id | INTEGER | — | PK, FK → produto.id | Sim | Produto da foto (1:1; apagar o produto apaga a foto) |
+| tipo | VARCHAR | 20 | — | Sim | `image/jpeg`, `image/png` ou `image/webp` (conferido pelos primeiros bytes do arquivo) |
+| dados | BYTEA | — | — | Sim | A imagem, de 1 byte a 512 KB |
+| atualizado_em | TIMESTAMPTZ | — | — | Sim | Quando a foto foi trocada; vira a "versão" na URL, para o navegador guardar a foto em cache |
 
 ## combo
 
@@ -139,7 +151,8 @@ produtos que o compõem. Restrição: UNIQUE (adicional_id, categoria_id).
 | --- | --- | --- | --- | --- | --- |
 | id | INTEGER | — | PK | Sim | Identificador único do ingrediente |
 | nome | VARCHAR | 100 | — | Sim | Nome do ingrediente/insumo |
-| quantidade_estoque | DECIMAL | 10,3 | — | Sim | Quantidade atualmente disponível em estoque, na unidade_medida definida |
+| quantidade_estoque | DECIMAL | 10,3 | — | Sim | Quantidade atualmente disponível em estoque, na unidade_medida definida. Baixa sozinha pela ficha técnica quando um pedido entra em preparo (nunca fica negativa) |
+| estoque_minimo | DECIMAL | 10,3 | — | Sim | Ponto de reposição: com o estoque nele ou abaixo, o ingrediente aparece para repor. Padrão 0 (sem alerta) |
 | unidade_medida | VARCHAR | 10 | — | Sim | Unidade de medida do estoque: `kg`, `litro` ou `unidade` |
 | fornecedor_id | INTEGER | — | FK → fornecedor.id | Sim | Fornecedor responsável pelo abastecimento deste ingrediente |
 

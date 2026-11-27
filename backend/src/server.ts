@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { environment } from "./config/env.js";
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
+import { encerrarEventos } from "./lib/eventos.js";
 import { prisma } from "./lib/prisma.js";
 import { garantirAdministradorInicial } from "./services/auth.service.js";
 
@@ -62,6 +63,7 @@ const shutdown = () => {
     process.exit(1);
   }, PRAZO_PARA_ENCERRAR_MS).unref();
 
+  encerrarEventos();
   server.close(async () => {
     await prisma.$disconnect();
     logger.info("servidor encerrado");

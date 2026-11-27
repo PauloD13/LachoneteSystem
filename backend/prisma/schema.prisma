@@ -23,16 +23,17 @@ datasource db {
 }
 
 model Cliente {
-  id                       Int      @id @default(autoincrement())
-  nome                     String   @db.VarChar(150)
-  telefone                 String   @db.VarChar(20)
-  email                    String?  @db.VarChar(150)
-  enderecoPadraoLogradouro String?  @map("endereco_padrao_logradouro") @db.VarChar(150)
-  enderecoPadraoNumero     String?  @map("endereco_padrao_numero") @db.VarChar(10)
-  enderecoPadraoBairro     String?  @map("endereco_padrao_bairro") @db.VarChar(100)
-  enderecoPadraoCidade     String?  @map("endereco_padrao_cidade") @db.VarChar(100)
-  enderecoPadraoCep        String?  @map("endereco_padrao_cep") @db.VarChar(9)
-  criadoEm                 DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+  id                       Int       @id @default(autoincrement())
+  nome                     String    @db.VarChar(150)
+  telefone                 String    @db.VarChar(20)
+  email                    String?   @db.VarChar(150)
+  enderecoPadraoLogradouro String?   @map("endereco_padrao_logradouro") @db.VarChar(150)
+  enderecoPadraoNumero     String?   @map("endereco_padrao_numero") @db.VarChar(10)
+  enderecoPadraoBairro     String?   @map("endereco_padrao_bairro") @db.VarChar(100)
+  enderecoPadraoCidade     String?   @map("endereco_padrao_cidade") @db.VarChar(100)
+  enderecoPadraoCep        String?   @map("endereco_padrao_cep") @db.VarChar(9)
+  criadoEm                 DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
+  anonimizadoEm            DateTime? @map("anonimizado_em") @db.Timestamptz(6)
 
   pedidos Pedido[]
 
@@ -87,8 +88,20 @@ model Produto {
   comboItens          ComboItem[]
   produtoIngredientes ProdutoIngrediente[]
   produtoPromocoes    ProdutoPromocao[]
+  foto                ProdutoFoto?
 
   @@map("produto")
+}
+
+model ProdutoFoto {
+  produtoId    Int      @id @map("produto_id")
+  tipo         String   @db.VarChar(20)
+  dados        Bytes
+  atualizadoEm DateTime @default(now()) @map("atualizado_em") @db.Timestamptz(6)
+
+  produto Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+
+  @@map("produto_foto")
 }
 
 model Combo {
@@ -167,6 +180,7 @@ model Ingrediente {
   id                Int     @id @default(autoincrement())
   nome              String  @db.VarChar(100)
   quantidadeEstoque Decimal @default(0) @map("quantidade_estoque") @db.Decimal(10, 3)
+  estoqueMinimo     Decimal @default(0) @map("estoque_minimo") @db.Decimal(10, 3)
   unidadeMedida     String  @map("unidade_medida") @db.VarChar(10)
   fornecedorId      Int     @map("fornecedor_id")
 

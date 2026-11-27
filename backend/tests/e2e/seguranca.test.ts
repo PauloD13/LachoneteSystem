@@ -25,6 +25,26 @@ describe("disponibilidade e cabeçalhos", () => {
     assert.equal(r.cabecalhos.get("x-content-type-options"), "nosniff");
     assert.match(r.cabecalhos.get("x-request-id") ?? "", /^[0-9a-f-]{36}$/);
   });
+
+  it("CSP restrita ao próprio servidor, sem iframe de fora, recursos sensíveis desligados", async () => {
+    const r = await api("GET", "/health");
+    const csp = r.cabecalhos.get("content-security-policy") ?? "";
+    assert.match(csp, /default-src 'self'/);
+    assert.match(csp, /frame-ancestors 'none'/);
+    assert.match(csp, /object-src 'none'/);
+    assert.doesNotMatch(csp, /https:/, "nenhuma origem externa liberada");
+    assert.match(
+      r.cabecalhos.get("permissions-policy") ?? "",
+      /camera=\(\).*geolocation=\(\)/,
+    );
+    assert.equal(r.cabecalhos.get("x-robots-tag"), "noindex, nofollow");
+  });
+
+  it("respostas com dados pessoais não ficam em cache", async () => {
+    const r = await api("GET", "/clientes", { token: await gerente() });
+    assert.equal(r.status, 200);
+    assert.equal(r.cabecalhos.get("cache-control"), "no-store");
+  });
 });
 
 describe("autenticação", () => {

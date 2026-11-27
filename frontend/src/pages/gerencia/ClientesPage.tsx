@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { useConsulta } from "../../hooks/useConsulta";
+import { useAcao } from "../../hooks/useAcao";
+import { useAuth } from "../../hooks/useAuth";
 import { clientes } from "../../services/cadastros";
 import { pedidos } from "../../services/pedidos";
 import { Icone } from "../../components/ui/Icone";
 import { Botao } from "../../components/ui/Botao";
 import { Folha } from "../../components/ui/Folha";
+import { Confirmacao } from "../../components/ui/Confirmacao";
+import { ErroDaApi } from "../../services/api";
+import { baixarJson } from "../../lib/arquivos";
 import { Paginacao } from "../../components/ui/Paginacao";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { ErroAoCarregar, Esqueleto, Vazio } from "../../components/ui/Estados";
@@ -144,7 +149,15 @@ export function ClientesPage() {
         </section>
 
         {idFicha !== null && (
-          <Ficha key={idFicha} id={idFicha} aoEditar={setEditando} />
+          <Ficha
+            key={idFicha}
+            id={idFicha}
+            aoEditar={setEditando}
+            aoExcluir={() => {
+              setSelecionado(null);
+              lista.recarregar();
+            }}
+          />
         )}
       </div>
 
@@ -171,7 +184,16 @@ export function ClientesPage() {
 }
 
 /** Dados, endereço e últimos pedidos do cliente (consultas próprias). */
-function Ficha({ id, aoEditar }: { id: number; aoEditar(c: Cliente): void }) {
+function Ficha({
+  id,
+  aoEditar,
+  aoExcluir,
+}: {
+  id: number;
+  aoEditar(c: Cliente): void;
+  aoExcluir(): void;
+}) {
+  const { temCargo } = useAuth();
   const ficha = useConsulta(`cliente:${id}`, (sinal) =>
     clientes.buscar(id, sinal),
   );
@@ -287,7 +309,7 @@ function Ficha({ id, aoEditar }: { id: number; aoEditar(c: Cliente): void }) {
                 minHeight: 44,
                 padding: "0 12px",
                 borderRadius: "var(--radius-md)",
-                background: "var(--surface-100)",
+                background: "var(--surface-inset)",
                 color: "var(--ink)",
                 textDecoration: "none",
               }}
@@ -311,6 +333,92 @@ function Ficha({ id, aoEditar }: { id: number; aoEditar(c: Cliente): void }) {
           ))
         )}
       </div>
+      {temCargo("gerente") && (
+        <DadosPessoais cliente={c} aoExcluir={aoExcluir} />
+      )}
     </section>
+  );
+}
+
+/**
+ * LGPD (art. 18): o gerente atende os pedidos do titular. Exportar entrega
+ * uma cópia de tudo; excluir apaga o cadastro de quem nunca pediu e, de quem
+ * já pediu, apaga os dados pessoais mantendo os pedidos (anonimização).
+ */
+function DadosPessoais({
+  cliente,
+  aoExcluir,
+}: {
+  cliente: Cliente;
+  aoExcluir(): void;
+}) {
+  const { executar, ocupado } = useAcao();
+  const [confirmar, setConfirmar] = useState(false);
+
+  async function exportar() {
+    await executar(async () => {
+      baixarJson(
+        `cliente-${cliente.id}-dados.json`,
+        await clientes.exportarDados(cliente.id),
+      );
+    }, "Arquivo com os dados gerado");
+  }
+
+  async function excluir() {
+    const ok = await executar(async () => {
+      try {
+        await clientes.remover(cliente.id);
+      } catch (erro) {
+        // Tem pedidos: os pedidos ficam, os dados pessoais saem.
+        if (erro instanceof ErroDaApi && erro.status === 409) {
+          await clientes.anonimizar(cliente.id);
+        } else {
+          throw erro;
+        }
+      }
+    }, "Dados pessoais excluídos");
+    setConfirmar(false);
+    if (ok) aoExcluir();
+  }
+
+  return (
+    <div className="ui-coluna" style={{ gap: 8 }}>
+      <h3 style={{ font: "800 15px/20px var(--font-sans)" }}>
+        Dados pessoais (LGPD)
+      </h3>
+      <p className="ui-texto-sm ui-suave">
+        A pedido do cliente: entregue uma cópia dos dados ou exclua-os.{" "}
+        <Link to="/privacidade" className="ui-link">
+          Aviso de privacidade
+        </Link>
+      </p>
+      <div className="ui-linha ui-linha--quebra" style={{ gap: 8 }}>
+        <Botao variante="fantasma" onClick={exportar} disabled={ocupado}>
+          Exportar dados
+        </Botao>
+        <Botao
+          variante="fantasma"
+          onClick={() => setConfirmar(true)}
+          disabled={ocupado}
+          style={{ color: "var(--danger-text)" }}
+        >
+          Excluir dados pessoais
+        </Botao>
+      </div>
+      <Confirmacao
+        aberta={confirmar}
+        titulo={`Excluir os dados de ${cliente.nome}?`}
+        confirmar="Excluir dados"
+        confirmando="Excluindo…"
+        perigo
+        aoFechar={() => setConfirmar(false)}
+        aoConfirmar={excluir}
+      >
+        Sem pedidos, o cadastro é apagado. Com pedidos, nome, telefone, e-mail,
+        endereço, observações e comentários são apagados, e os pedidos ficam
+        como &quot;Cliente anonimizado&quot; (o registro de vendas precisa
+        deles). Não dá para desfazer.
+      </Confirmacao>
+    </div>
   );
 }

@@ -1,8 +1,9 @@
-# MER Conceitual — Sistema Lanchonete Sabor & Cia (RASCUNHO)
+# MER Conceitual — Sistema Lanchonete Sabor & Cia
 
-> Status: rascunho de trabalho para discussão. Ainda não é a versão final do
-> entregável 7.1. Cada decisão aqui precisa ser confirmada/ajustada antes de
-> avançarmos para o DER (dbdiagram.io) e o Dicionário de Dados.
+> Status: versão final (entregável 7.1). As decisões da seção 4 foram
+> confirmadas e estão implementadas em `database/init/001_schema.sql`; o DER
+> (`02-der.dbml`), o dicionário (`03-dicionario-de-dados.md`) e o modelo
+> lógico (`04-modelo-logico.md`) seguem este documento.
 
 ## 1. Entidades fortes
 
@@ -42,9 +43,10 @@ associativas resolvem relacionamentos N:N que carregam atributos próprios.
 | ProdutoIngrediente | Associativa | Produto + Ingrediente | "Ficha técnica": quantidade de cada ingrediente usada por produto — é o dado que permite estimar consumo de estoque |
 | ComboItem | Associativa | Combo + Produto | Um combo reúne 2+ produtos; a associação define quais e em que quantidade |
 | ProdutoPromocao | Associativa | Produto + Promocao | Um produto pode participar de várias promoções ao longo do tempo; precisa manter histórico mesmo após encerradas |
+| ProdutoFoto | Fraca (1:1 opcional) | Produto | Foto do cardápio, opcional; separada de Produto para as listagens não carregarem os bytes da imagem |
 | AdicionalCategoria | Associativa | Adicional + Categoria | Define em quais categorias do cardápio cada adicional é oferecido ("bacon extra" vale para Lanches, não para Bebidas). Num combo valem as categorias dos produtos que o compõem |
 
-## 3. Relacionamentos e cardinalidades (visão preliminar)
+## 3. Relacionamentos e cardinalidades
 
 | Relacionamento | Cardinalidade | Participação | Observação |
 | --- | --- | --- | --- |
@@ -56,6 +58,7 @@ associativas resolvem relacionamentos N:N que carregam atributos próprios.
 | Combo — ItemPedido | 1:N | Parcial | Idem acima |
 | Combo — Produto | N:N (via ComboItem) | Total do lado Combo | Combo sem produto não existe |
 | Produto — Ingrediente | N:N (via ProdutoIngrediente) | Total do lado Produto | Todo produto do cardápio tem ficha técnica |
+| Produto — ProdutoFoto | 1:1 | Parcial do lado Produto | Foto é opcional (ver decisão 11) |
 | Ingrediente — Fornecedor | N:1 | Total do lado Ingrediente | Cada ingrediente tem um fornecedor responsável (ver decisão 2) |
 | Pedido — FormaPagamento | N:N (via PedidoPagamento) | Parcial | Um pedido pode ser pago com várias formas. O pagamento pode ser registrado junto com o pedido ou depois (ex.: na mesa, ao fim da refeição); o saldo em aberto aparece nos totais do pedido |
 | Pedido — Cupom | N:1 | Parcial | Cupom é opcional |
@@ -159,12 +162,28 @@ final dessas justificativas.
    entrou e saiu do caixa — os dois fatos são história) e sim marcados como
    estornados.
 
+10. **Estoque mínimo — ADICIONADO na entrega final.**
+    `Ingrediente` ganhou `estoque_minimo` (ponto de reposição). É atributo, e
+    não entidade, porque é um único valor por ingrediente. A baixa do
+    estoque pela ficha técnica (quando o pedido entra em preparo) não cria
+    entidade nova: atualiza `quantidade_estoque`.
+
+11. **Foto do produto — ADICIONADO na entrega final.**
+    Entidade fraca `ProdutoFoto` (1:1 opcional com Produto), e não atributo
+    de Produto, porque a imagem pesa até 512 KB e quase toda consulta de
+    produto não precisa dela.
+
+12. **Anonimização (LGPD) — ADICIONADO na entrega final.**
+    `Cliente` ganhou `anonimizado_em`. Quem tem pedidos não pode ser apagado
+    (os pedidos são registro de vendas), então os dados pessoais são
+    apagados no lugar e o cadastro fica só como referência. Ver
+    `06-lgpd.md`.
+
 ## 5. Próximos passos
 
 1. ~~Você revisa este rascunho e me diz o que ajustar/discordar~~ ✅ feito;
 2. ~~Fechamos as decisões da seção 4~~ ✅ feito;
-3. **Próximo:** transformar isso no DER em DBML (dbdiagram.io) com notação
-   Crow's Foot, já com tipos de atributo (simples, composto, multivalorado,
-   derivado, chave) documentados;
-4. Escrever o Dicionário de Dados a partir do DER fechado;
-5. Derivar o Modelo Lógico (DDL) verificando 3FN.
+3. ~~DER em DBML (dbdiagram.io), notação Crow's Foot~~ ✅ `02-der.dbml`;
+4. ~~Dicionário de Dados~~ ✅ `03-dicionario-de-dados.md`;
+5. ~~Modelo Lógico (DDL) com verificação de 3FN~~ ✅ `04-modelo-logico.md` e
+   `database/init/001_schema.sql`.

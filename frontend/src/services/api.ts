@@ -52,6 +52,11 @@ export function definirToken(novo: string | null): void {
   token = novo;
 }
 
+/** Token da sessão atual (para conexões feitas fora de `requisitar`). */
+export function tokenAtual(): string | null {
+  return token;
+}
+
 /** Chamado quando uma requisição autenticada recebe 401. */
 export function definirAoExpirarSessao(callback: (() => void) | null): void {
   aoExpirarSessao = callback;
@@ -68,6 +73,8 @@ export interface OpcoesDeRequisicao {
   consulta?: Record<string, ValorDeConsulta>;
   /** Para cancelar a requisição (ex.: a tela foi fechada antes da resposta). */
   sinal?: AbortSignal;
+  /** Arquivo enviado como está (ex.: foto), no lugar do corpo JSON. */
+  arquivo?: Blob;
 }
 
 export function montarConsulta(
@@ -105,10 +112,11 @@ function mensagemPadrao(status: number): string {
 export async function requisitar<T>(
   metodo: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   caminho: string,
-  { corpo, consulta, sinal }: OpcoesDeRequisicao = {},
+  { corpo, consulta, sinal, arquivo }: OpcoesDeRequisicao = {},
 ): Promise<T> {
   const cabecalhos: Record<string, string> = { Accept: "application/json" };
   if (corpo !== undefined) cabecalhos["Content-Type"] = "application/json";
+  if (arquivo) cabecalhos["Content-Type"] = arquivo.type;
   if (token) cabecalhos.Authorization = `Bearer ${token}`;
 
   let resposta: Response;
@@ -116,7 +124,8 @@ export async function requisitar<T>(
     resposta = await fetch(`${PREFIXO}${caminho}${montarConsulta(consulta)}`, {
       method: metodo,
       headers: cabecalhos,
-      body: corpo === undefined ? undefined : JSON.stringify(corpo),
+      body:
+        arquivo ?? (corpo === undefined ? undefined : JSON.stringify(corpo)),
       signal: sinal,
     });
   } catch (erro) {

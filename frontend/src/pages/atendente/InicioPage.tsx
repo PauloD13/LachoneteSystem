@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { useAuth } from "../../hooks/useAuth";
 import { useConsulta } from "../../hooks/useConsulta";
 import { usePeriodico } from "../../hooks/usePeriodico";
+import { useAoVivo } from "../../hooks/useAoVivo";
 import { pedidos } from "../../services/pedidos";
 import { Icone } from "../../components/ui/Icone";
 import { StatusBadge } from "../../components/ui/StatusBadge";
@@ -35,10 +36,12 @@ export function InicioPage() {
       sinal,
     ),
   );
-  usePeriodico(() => {
+  const recarregar = () => {
     abertos.recarregar();
     atendidos.recarregar();
-  }, 20000);
+  };
+  const aoVivo = useAoVivo(recarregar);
+  usePeriodico(recarregar, aoVivo ? 120000 : 20000);
 
   const lista = abertos.dados?.dados ?? [];
   const prontos = lista.filter((p) => p.statusAtual === "PRONTO");

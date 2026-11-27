@@ -38,6 +38,8 @@ export interface Cliente {
   enderecoPadraoCidade: string | null;
   enderecoPadraoCep: string | null;
   criadoEm: Instante;
+  /** Preenchido quando os dados pessoais foram apagados (LGPD). */
+  anonimizadoEm: Instante | null;
 }
 
 /** Cliente na listagem: com contadores de consumo. */
@@ -59,7 +61,7 @@ export interface ClienteDetalhado extends Cliente {
   };
 }
 
-export type ClienteEntrada = Omit<Cliente, "id" | "criadoEm">;
+export type ClienteEntrada = Omit<Cliente, "id" | "criadoEm" | "anonimizadoEm">;
 
 export interface Funcionario {
   id: number;
@@ -140,6 +142,8 @@ export interface Produto {
   precoVigente: Dinheiro;
   promocaoVigente: { id: number; nome: string; dataFim: Dia } | null;
   totalVariacoes: number;
+  /** Versão da foto (muda a cada foto nova); null = sem foto. */
+  fotoVersao: number | null;
 }
 
 export interface ProdutoEntrada {
@@ -277,6 +281,10 @@ export interface Ingrediente {
   id: number;
   nome: string;
   quantidadeEstoque: Decimal;
+  /** Ponto de reposição; "0" = sem alerta. */
+  estoqueMinimo: Decimal;
+  /** Estoque no mínimo ou abaixo dele. */
+  repor: boolean;
   unidadeMedida: UnidadeMedida;
   fornecedorId: number;
   fornecedor: { id: number; nome: string };
@@ -289,6 +297,7 @@ export interface Ingrediente {
 export interface IngredienteEntrada {
   nome: string;
   quantidadeEstoque?: number;
+  estoqueMinimo?: number;
   unidadeMedida: UnidadeMedida;
   fornecedorId: number;
 }
