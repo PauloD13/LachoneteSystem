@@ -30,6 +30,7 @@ export function InicioPage() {
       sinal,
     ),
   );
+  // Dos atendidos só importa o total (contador): uma linha basta.
   const atendidos = useConsulta(`inicio:atendidos:${hoje}`, (sinal) =>
     pedidos.listar(
       { status: "ENTREGUE_RETIRADO", dataInicio: hoje, tamanhoPagina: 1 },

@@ -83,21 +83,17 @@ export async function criar(dados: CriarProdutoDTO) {
   const produto = await prisma.$transaction(async (tx) => {
     await exigirCategoria(tx, categoriaId);
 
-    // 1. Cria o supertipo primeiro — é dele que vem o id compartilhado.
+    // O supertipo vem primeiro porque é dele o id que o subtipo reusa (chave
+    // compartilhada). No COMMIT, os triggers de 001_schema.sql conferem que
+    // o item existe em exatamente uma das tabelas-filha.
     const itemVendavel = await tx.itemVendavel.create({
       data: { nome, preco, ativo, tipo: TIPO_PRODUTO },
     });
 
-    // 2. Cria o subtipo usando o MESMO id (chave compartilhada, não FK
-    // autoincrement própria). Os triggers de database/init/001_schema.sql
-    // mantêm item_vendavel.tipo consistente e conferem, no COMMIT, que o
-    // item existe em exatamente uma das tabelas-filha.
     await tx.produto.create({
       data: { id: itemVendavel.id, categoriaId, descricao },
     });
 
-    // 3. Relê com os relacionamentos já carregados, pra devolver o
-    // formato achatado de uma vez.
     return tx.produto.findUniqueOrThrow({
       where: { id: itemVendavel.id },
       include: comRelacoes(hojeComoData()),

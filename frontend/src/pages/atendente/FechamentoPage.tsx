@@ -93,12 +93,16 @@ export function FechamentoPage() {
   const totalReferencia =
     paraNumero(simulacao?.resultado?.totais.total) ||
     carrinho.itens.reduce((s, i) => s + precoUnitario(i) * i.quantidade, 0);
+  // A API recusa pagamento acima do total: o excesso em dinheiro vira troco
+  // na tela e não vai no pedido.
   const { pagamentos: pagamentosAjustados, troco } = pagamentosSemTroco(
     carrinho.pagamentos,
     totalReferencia,
     idDoDinheiro,
   );
   const corpo = montarPedido(carrinho, pagamentosAjustados);
+  // O corpo em texto vira a chave da simulação: só simula de novo quando o
+  // pedido muda de verdade, e não a cada renderização.
   const chaveDoCorpo = JSON.stringify(corpo);
 
   // Bloqueios que a própria tela já sabe explicar (antes de perguntar ao servidor).
@@ -114,7 +118,9 @@ export function FechamentoPage() {
   else if (carrinho.cupom && !carrinho.cliente)
     bloqueio = "Cupom só vale para cliente cadastrado.";
 
-  // Simula no servidor (preços, promoções, cupom, erros) a cada mudança.
+  // Simula no servidor (preços, promoções, cupom, erros) a cada mudança. A
+  // espera de 350 ms junta as teclas de quem está digitando num pedido só, e
+  // a resposta de uma simulação antiga é descartada (abort).
   useEffect(() => {
     if (bloqueio || enviado) return;
     const controle = new AbortController();
@@ -141,12 +147,17 @@ export function FechamentoPage() {
     simulacaoAtual?.resultado ?? (bloqueio ? undefined : ultimoResultado);
   const erroDoServidor =
     !bloqueio && simulacaoAtual?.erro ? motivo(simulacaoAtual.erro) : "";
+  // Erro que fala de cupom aparece junto do campo do cupom, não só no rodapé.
   const erroDeCupom = /cupom/i.test(erroDoServidor) ? erroDoServidor : "";
 
   const total = paraNumero(resultado?.totais.total);
   const pagoDigitado = carrinho.pagamentos.reduce((s, p) => s + p.valor, 0);
+  // Arredonda em centavos: soma de números com vírgula deixa resíduos
+  // (0,1 + 0,2 = 0,30000000000000004) que mostrariam "falta R$ 0,00".
   const falta = Math.round((total - (pagoDigitado - troco)) * 100) / 100;
 
+  // Só registra o que o servidor acabou de simular sem erro: o total da tela
+  // é exatamente o que será cobrado.
   const travado =
     enviando || !!bloqueio || !!erroDoServidor || !simulacaoAtual?.resultado;
 

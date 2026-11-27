@@ -160,6 +160,11 @@ function Mesas() {
   );
 }
 
+/**
+ * Lista curta que só cadastra (formas de pagamento, cargos). Renomear e
+ * remover são raros e ficam na API: os cargos-base não mudam, e o que já foi
+ * usado em pedidos ou vínculos fica como histórico.
+ */
 function ListaSimples<T extends { id: number; nome: string }>({
   titulo,
   chave,
