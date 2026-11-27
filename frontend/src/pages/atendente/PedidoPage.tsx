@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import { useAvisos } from "../../hooks/useAvisos";
 import { useConsulta } from "../../hooks/useConsulta";
 import { usePeriodico } from "../../hooks/usePeriodico";
+import { useAoVivo } from "../../hooks/useAoVivo";
 import { pedidos } from "../../services/pedidos";
 import { formasPagamento, funcionarios } from "../../services/cadastros";
 import { ErroDaApi } from "../../services/api";
@@ -54,7 +55,8 @@ export function PedidoPage() {
   const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
   const [recebendo, setRecebendo] = useState(false);
   // A cozinha e o entregador mudam o status de outros aparelhos.
-  usePeriodico(consulta.recarregar, 30000);
+  const aoVivo = useAoVivo(consulta.recarregar, (e) => e.id === idPedido);
+  usePeriodico(consulta.recarregar, aoVivo ? 120000 : 30000);
 
   // A resposta das ações já traz o pedido atualizado; a consulta, quando
   // recarrega, volta a ser a fonte.
@@ -293,7 +295,7 @@ export function PedidoPage() {
               </span>
               <Botao
                 variante="fantasma"
-                style={{ background: "var(--surface-100)", minHeight: 40 }}
+                style={{ background: "var(--surface-inset)", minHeight: 40 }}
                 onClick={() => setRecebendo(true)}
               >
                 <Icone nome="dinheiro" tamanho={18} />
@@ -540,7 +542,7 @@ function Entrega({
           <span
             className="ui-avatar"
             aria-hidden="true"
-            style={{ background: "var(--surface-100)" }}
+            style={{ background: "var(--surface-inset)" }}
           >
             {inicial(entrega.entregador.nome)}
           </span>

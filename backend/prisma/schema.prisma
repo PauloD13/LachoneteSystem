@@ -87,8 +87,20 @@ model Produto {
   comboItens          ComboItem[]
   produtoIngredientes ProdutoIngrediente[]
   produtoPromocoes    ProdutoPromocao[]
+  foto                ProdutoFoto?
 
   @@map("produto")
+}
+
+model ProdutoFoto {
+  produtoId    Int      @id @map("produto_id")
+  tipo         String   @db.VarChar(20)
+  dados        Bytes
+  atualizadoEm DateTime @default(now()) @map("atualizado_em") @db.Timestamptz(6)
+
+  produto Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+
+  @@map("produto_foto")
 }
 
 model Combo {
@@ -167,6 +179,7 @@ model Ingrediente {
   id                Int     @id @default(autoincrement())
   nome              String  @db.VarChar(100)
   quantidadeEstoque Decimal @default(0) @map("quantidade_estoque") @db.Decimal(10, 3)
+  estoqueMinimo     Decimal @default(0) @map("estoque_minimo") @db.Decimal(10, 3)
   unidadeMedida     String  @map("unidade_medida") @db.VarChar(10)
   fornecedorId      Int     @map("fornecedor_id")
 

@@ -90,7 +90,7 @@ export function EquipePage() {
                 <span
                   className="ui-avatar"
                   aria-hidden="true"
-                  style={{ background: "var(--surface-100)" }}
+                  style={{ background: "var(--surface-inset)" }}
                 >
                   {inicial(f.nome)}
                 </span>
@@ -321,8 +321,17 @@ function Cargos({
   return (
     <div className="ui-coluna" style={{ gap: 8 }}>
       <h3 style={{ font: "800 15px/20px var(--font-sans)" }}>Cargos</h3>
-      {abertos.length === 0 && (
-        <p className="ui-texto-sm ui-suave">Nenhum cargo vigente.</p>
+      {historico.erro ? (
+        <ErroAoCarregar
+          erro={historico.erro}
+          aoTentarDeNovo={historico.recarregar}
+        />
+      ) : !historico.dados ? (
+        <Esqueleto linhas={1} altura={44} rotulo="Carregando cargos" />
+      ) : (
+        abertos.length === 0 && (
+          <p className="ui-texto-sm ui-suave">Nenhum cargo vigente.</p>
+        )
       )}
       {abertos.map((v) => (
         <div

@@ -23,6 +23,8 @@ export interface ItemDoCardapio {
   preco: number;
   precoCheio?: number;
   totalVariacoes: number;
+  /** Só produtos têm foto. */
+  fotoVersao?: number | null;
 }
 
 interface Props {

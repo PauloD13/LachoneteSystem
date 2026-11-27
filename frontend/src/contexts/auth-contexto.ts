@@ -9,6 +9,12 @@ export interface ValorDaAutenticacao {
   /** Devolve quem entrou; lança ErroDaApi se login/senha estiverem errados. */
   entrar(login: string, senha: string): Promise<Usuario>;
   sair(): void;
+  /**
+   * Id de quem estava logado quando a sessão expirou (401 no meio do uso);
+   * `null` depois de um "Sair" voluntário. Decide se o login volta para a
+   * tela anterior (ver destinoAposEntrar).
+   */
+  expirouDe: number | null;
   /** O usuário exerce HOJE algum destes cargos? */
   temCargo(...cargos: NomeDeCargo[]): boolean;
 }

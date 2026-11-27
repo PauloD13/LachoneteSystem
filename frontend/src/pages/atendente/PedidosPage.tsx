@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useConsulta } from "../../hooks/useConsulta";
 import { usePeriodico } from "../../hooks/usePeriodico";
+import { useAoVivo } from "../../hooks/useAoVivo";
 import { pedidos, type FiltrosDePedido } from "../../services/pedidos";
 import { Chip } from "../../components/ui/Chip";
 import { Icone } from "../../components/ui/Icone";
@@ -47,10 +48,13 @@ export function PedidosPage({ largo = false }: { largo?: boolean }) {
   const contagemAbertos = useConsulta("pedidos:contagem", (sinal) =>
     pedidos.listar({ status: STATUS_EM_ABERTO, tamanhoPagina: 1 }, sinal),
   );
-  usePeriodico(() => {
+  const recarregar = () => {
     lista.recarregar();
     contagemAbertos.recarregar();
-  }, 30000);
+  };
+  // Com a conexão em tempo real aberta, a consulta periódica é só reserva.
+  const aoVivo = useAoVivo(recarregar);
+  usePeriodico(recarregar, aoVivo ? 120000 : 30000);
 
   const mudarFiltro = (f: Filtro) => {
     setFiltro(f);

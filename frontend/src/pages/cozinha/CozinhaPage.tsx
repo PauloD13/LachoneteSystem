@@ -4,6 +4,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useAvisos } from "../../hooks/useAvisos";
 import { useConsulta } from "../../hooks/useConsulta";
 import { usePeriodico } from "../../hooks/usePeriodico";
+import { useAoVivo } from "../../hooks/useAoVivo";
 import { pedidos } from "../../services/pedidos";
 import { Botao } from "../../components/ui/Botao";
 import { Icone } from "../../components/ui/Icone";
@@ -59,7 +60,10 @@ function quandoEntrou(pedido: Pedido, status: StatusPedido): string {
   );
 }
 
-/** Tela 8 — Cozinha (tablet na horizontal). Atualiza a cada 10 s. */
+/**
+ * Tela 8 — Cozinha (tablet na horizontal). Pedido novo aparece na hora (tempo
+ * real); sem a conexão, a fila é consultada a cada 10 s.
+ */
 export function CozinhaPage() {
   const { usuario } = useAuth();
   const avisos = useAvisos();
@@ -78,7 +82,8 @@ export function CozinhaPage() {
       sinal,
     ),
   );
-  usePeriodico(fila.recarregar, 10000);
+  const aoVivo = useAoVivo(fila.recarregar);
+  usePeriodico(fila.recarregar, aoVivo ? 60000 : 10000);
   // Os relógios das comandas andam sem precisar buscar de novo.
   usePeriodico(() => setAgora(Date.now()), 30000);
   useEffect(() => () => clearTimeout(timerDestaque.current), []);
@@ -135,6 +140,16 @@ export function CozinhaPage() {
           </span>
         </div>
         <div className="ui-linha" style={{ gap: 12 }}>
+          <span
+            className={`ui-ao-vivo${aoVivo ? "" : " ui-ao-vivo--off"}`}
+            title={
+              aoVivo
+                ? "Pedidos novos aparecem na hora"
+                : "Sem conexão em tempo real: atualiza a cada 10 s"
+            }
+          >
+            {aoVivo ? "ao vivo" : "a cada 10 s"}
+          </span>
           <span
             className="sc-tnum"
             style={{ font: "600 28px/32px var(--font-display)" }}

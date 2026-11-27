@@ -5,6 +5,7 @@ import { paginar, recorte } from "../lib/paginacao.js";
 import { hojeComoData } from "../lib/datas.js";
 import { melhorPreco } from "../lib/precos.js";
 import { removerOuExplicar } from "../lib/remocao.js";
+import type { TipoDeImagem } from "../lib/imagem.js";
 import type {
   CriarProdutoDTO,
   AtualizarProdutoDTO,
@@ -21,6 +22,8 @@ function comRelacoes(hoje: Date) {
   return {
     itemVendavel: true,
     categoria: true,
+    // Só a data: os bytes da foto saem apenas em GET /produtos/:id/foto.
+    foto: { select: { atualizadoEm: true } },
     _count: { select: { variacoes: true } },
     produtoPromocoes: {
       where: {
@@ -57,6 +60,9 @@ function achatar(produto: ProdutoComRelacoes) {
       dataFim: vigente.promocao.dataFim,
     },
     totalVariacoes: produto._count.variacoes,
+    // Versão da foto (ms), para a URL mudar quando a foto muda e o navegador
+    // poder guardar cada versão em cache para sempre. null = sem foto.
+    fotoVersao: produto.foto?.atualizadoEm.getTime() ?? null,
   };
 }
 
@@ -186,4 +192,42 @@ export async function remover(id: number) {
       }),
     "Produto já vendido ou usado em combo não pode ser removido: desative-o (ativo = false) para tirá-lo do cardápio.",
   );
+}
+
+// -----------------------------------------------------------------------------
+// Foto
+// -----------------------------------------------------------------------------
+
+export async function definirFoto(
+  id: number,
+  tipo: TipoDeImagem,
+  dados: Uint8Array<ArrayBuffer>,
+) {
+  await prisma.produto.findUniqueOrThrow({
+    where: { id },
+    select: { id: true },
+  });
+  await prisma.produtoFoto.upsert({
+    where: { produtoId: id },
+    create: { produtoId: id, tipo, dados },
+    update: { tipo, dados, atualizadoEm: new Date() },
+  });
+  return buscarPorId(id);
+}
+
+export async function removerFoto(id: number) {
+  await prisma.produto.findUniqueOrThrow({
+    where: { id },
+    select: { id: true },
+  });
+  await prisma.produtoFoto.deleteMany({ where: { produtoId: id } });
+  return buscarPorId(id);
+}
+
+export async function buscarFoto(id: number) {
+  const foto = await prisma.produtoFoto.findUnique({
+    where: { produtoId: id },
+  });
+  if (!foto) throw new AppError(404, "Produto sem foto.");
+  return foto;
 }

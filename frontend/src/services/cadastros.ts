@@ -2,7 +2,7 @@
 //   const pagina = await clientes.listar({ busca: "ana", pagina: 2 });
 //   await produtos.atualizar(7, { ativo: false });
 
-import { api } from "./api";
+import { api, requisitar } from "./api";
 import { criarRecurso } from "./recurso";
 import type { ConsultaPaginada } from "../types/api";
 import type {
@@ -66,11 +66,18 @@ export const formasPagamento = criarRecurso<FormaPagamento, { nome: string }>(
 export const categorias = criarRecurso<Categoria, { nome: string }>(
   "/categorias",
 );
-export const produtos = criarRecurso<
-  Produto,
-  ProdutoEntrada,
-  ComAtivo & { categoriaId?: number; busca?: string }
->("/produtos");
+export const produtos = {
+  ...criarRecurso<
+    Produto,
+    ProdutoEntrada,
+    ComAtivo & { categoriaId?: number; busca?: string }
+  >("/produtos"),
+  /** Troca a foto (JPEG, PNG ou WebP até 512 KB); devolve o produto. */
+  enviarFoto: (id: number, foto: Blob) =>
+    api.put<Produto>(`/produtos/${id}/foto`, undefined, { arquivo: foto }),
+  removerFoto: (id: number) =>
+    requisitar<Produto>("DELETE", `/produtos/${id}/foto`),
+};
 export const combos = criarRecurso<Combo, ComboEntrada, ComAtivo>("/combos");
 export const adicionais = criarRecurso<
   Adicional,
@@ -98,6 +105,8 @@ export const ingredientes = criarRecurso<
     busca?: string;
     /** estoque = menor estoque primeiro. */
     ordem?: "nome" | "estoque";
+    /** true: só os que estão no estoque mínimo ou abaixo. */
+    repor?: boolean;
   }
 >("/ingredientes");
 

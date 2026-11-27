@@ -58,6 +58,13 @@ Table produto {
   descricao text
 }
 
+Table produto_foto {
+  produto_id integer [pk, ref: - produto.id, note: '1:1; apagar o produto apaga a foto']
+  tipo varchar(20) [not null, note: 'image/jpeg | image/png | image/webp']
+  dados bytea [not null, note: 'até 512 KB']
+  atualizado_em timestamptz [not null, default: `now()`]
+}
+
 Table combo {
   id integer [pk, ref: > item_vendavel.id]
   descricao text
@@ -114,6 +121,7 @@ Table ingrediente {
   id integer [pk, increment]
   nome varchar [not null]
   quantidade_estoque decimal(10,3) [not null, default: 0]
+  estoque_minimo decimal(10,3) [not null, default: 0, note: 'ponto de reposição; 0 = sem alerta']
   unidade_medida varchar [not null, note: 'kg | litro | unidade']
   fornecedor_id integer [not null, ref: > fornecedor.id]
 }
