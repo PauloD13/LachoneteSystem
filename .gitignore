@@ -33,3 +33,6 @@ Thumbs.db
 
 # Volumes/dados locais do Docker (se algum dia forem montados em pasta local)
 docker/data/
+
+#IA / Agentes
+.claude/
