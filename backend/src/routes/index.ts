@@ -19,6 +19,7 @@ import cupomRoutes from "./cupom.routes.js";
 import pedidoRoutes from "./pedido.routes.js";
 import relatorioRoutes from "./relatorio.routes.js";
 import { transmitirEventos } from "../lib/eventos.js";
+import { foto as fotoDoProduto } from "../controllers/produto.controller.js";
 
 const router = Router();
 
@@ -58,6 +59,9 @@ router.get("/health", async (_req: Request, res: Response) => {
 });
 
 router.use("/auth", authRoutes);
+
+// Foto do produto: pública porque a tag <img> não envia o token de login.
+router.get("/produtos/:id/foto", fotoDoProduto);
 
 // -----------------------------------------------------------------------------
 // Daqui para baixo, tudo exige login.

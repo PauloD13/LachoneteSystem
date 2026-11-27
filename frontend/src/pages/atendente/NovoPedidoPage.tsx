@@ -10,6 +10,7 @@ import { Segmentado } from "../../components/ui/Segmentado";
 import { Chip } from "../../components/ui/Chip";
 import { Icone } from "../../components/ui/Icone";
 import { iconeDaCategoria } from "../../lib/icones";
+import { Miniatura } from "../../components/ui/Miniatura";
 import { Esqueleto, ErroAoCarregar, Vazio } from "../../components/ui/Estados";
 import {
   FolhaDoItem,
@@ -116,6 +117,7 @@ export function NovoPedidoPage() {
         preco: paraNumero(p.precoVigente),
         precoCheio: paraNumero(p.preco),
         totalVariacoes: p.totalVariacoes,
+        fotoVersao: p.fotoVersao,
       }));
     },
   );
@@ -284,17 +286,15 @@ export function NovoPedidoPage() {
                   className={estilos.produtoAbrir}
                   onClick={() => setItemAberto(p)}
                 >
-                  <span className="ui-miniatura" aria-hidden="true">
-                    <Icone
-                      nome={
-                        p.tipo === "COMBO"
-                          ? "combo"
-                          : iconeDaCategoria(p.categoriaNome)
-                      }
-                      tamanho={30}
-                      traco={1.8}
-                    />
-                  </span>
+                  <Miniatura
+                    produtoId={p.itemVendavelId}
+                    fotoVersao={p.fotoVersao}
+                    icone={
+                      p.tipo === "COMBO"
+                        ? "combo"
+                        : iconeDaCategoria(p.categoriaNome)
+                    }
+                  />
                   <span className={estilos.produtoTexto}>
                     <span className={estilos.produtoNome}>{p.nome}</span>
                     {p.descricao && (

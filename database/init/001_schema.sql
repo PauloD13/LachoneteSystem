@@ -80,6 +80,16 @@ CREATE TABLE produto (
     descricao     TEXT
 );
 
+-- Foto do produto (opcional), no próprio banco: o backup do Postgres leva
+-- as fotos junto e o container não precisa de volume para arquivos. Fica
+-- numa tabela à parte para as listagens de produto não carregarem os bytes.
+CREATE TABLE produto_foto (
+    produto_id     INTEGER PRIMARY KEY REFERENCES produto(id) ON DELETE CASCADE,
+    tipo           VARCHAR(20) NOT NULL CHECK (tipo IN ('image/jpeg', 'image/png', 'image/webp')),
+    dados          BYTEA NOT NULL CHECK (octet_length(dados) BETWEEN 1 AND 524288),
+    atualizado_em  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE combo (
     id         INTEGER PRIMARY KEY REFERENCES item_vendavel(id) ON DELETE CASCADE,
     descricao  TEXT

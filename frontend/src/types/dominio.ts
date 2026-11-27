@@ -140,6 +140,8 @@ export interface Produto {
   precoVigente: Dinheiro;
   promocaoVigente: { id: number; nome: string; dataFim: Dia } | null;
   totalVariacoes: number;
+  /** Versão da foto (muda a cada foto nova); null = sem foto. */
+  fotoVersao: number | null;
 }
 
 export interface ProdutoEntrada {

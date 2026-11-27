@@ -149,6 +149,7 @@ categoria(id, nome)
 item_vendavel(id, nome, preco, tipo, ativo)
 
 produto(id*, categoria_id→categoria, descricao)                          -- id também é FK p/ item_vendavel
+produto_foto(produto_id*→produto, tipo, dados, atualizado_em)              -- foto opcional, 1:1
 combo(id*, descricao)                                                     -- id também é FK p/ item_vendavel
 
 combo_item(id, combo_id→combo, produto_id→produto, quantidade)

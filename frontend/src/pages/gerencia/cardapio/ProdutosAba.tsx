@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useConsulta } from "../../../hooks/useConsulta";
 import { useAcao } from "../../../hooks/useAcao";
 import { useSelecaoNaLista } from "../../../hooks/useSelecaoNaLista";
@@ -14,6 +14,7 @@ import { Campo } from "../../../components/ui/Campo";
 import { Chip } from "../../../components/ui/Chip";
 import { Confirmacao } from "../../../components/ui/Confirmacao";
 import { Icone } from "../../../components/ui/Icone";
+import { Miniatura } from "../../../components/ui/Miniatura";
 import {
   ErroAoCarregar,
   Esqueleto,
@@ -26,6 +27,8 @@ import {
 } from "../../../lib/formularios";
 import { moeda, paraNumero, quantidade } from "../../../lib/formatadores";
 import { ROTULO_UNIDADE } from "../../../lib/rotulos";
+import { reduzirFoto } from "../../../lib/fotos";
+import { iconeDaCategoria } from "../../../lib/icones";
 import type { Produto } from "../../../types/dominio";
 
 /** Aba Produtos: lista por categoria + edição com variações e ficha técnica. */
@@ -280,12 +283,14 @@ function EditorProduto({
 
       {produto ? (
         <>
+          <FotoDoProduto produto={produto} aoTrocar={aoSalvar} />
           <Variacoes produtoId={produto.id} />
           <FichaTecnica produtoId={produto.id} />
         </>
       ) : (
         <p className="ui-texto-sm ui-suave">
-          Variações e ficha técnica ficam disponíveis depois de criar o produto.
+          Foto, variações e ficha técnica ficam disponíveis depois de criar o
+          produto.
         </p>
       )}
 
@@ -301,6 +306,82 @@ function EditorProduto({
         antigos continuam com ele. Dá para reativar depois.
       </Confirmacao>
     </section>
+  );
+}
+
+/**
+ * Foto do produto: reduzida no navegador antes de enviar (foto de celular tem
+ * vários MB); sem foto, o pedido mostra o ícone da categoria.
+ */
+function FotoDoProduto({
+  produto,
+  aoTrocar,
+}: {
+  produto: Produto;
+  aoTrocar(p: Produto): void;
+}) {
+  const { executar, ocupado } = useAcao();
+  const entrada = useRef<HTMLInputElement>(null);
+
+  async function escolher(arquivo: File | undefined) {
+    if (!arquivo) return;
+    let salvo: Produto | undefined;
+    const ok = await executar(async () => {
+      salvo = await produtos.enviarFoto(produto.id, await reduzirFoto(arquivo));
+    }, "Foto salva");
+    if (entrada.current) entrada.current.value = "";
+    if (ok && salvo) aoTrocar(salvo);
+  }
+
+  async function remover() {
+    let salvo: Produto | undefined;
+    const ok = await executar(async () => {
+      salvo = await produtos.removerFoto(produto.id);
+    }, "Foto removida");
+    if (ok && salvo) aoTrocar(salvo);
+  }
+
+  return (
+    <div className="ui-coluna" style={{ gap: 8 }}>
+      <h3 style={{ font: "800 15px/20px var(--font-sans)" }}>Foto</h3>
+      <div className="ui-linha" style={{ gap: 14, alignItems: "center" }}>
+        <Miniatura
+          produtoId={produto.id}
+          fotoVersao={produto.fotoVersao}
+          icone={iconeDaCategoria(produto.categoriaNome)}
+          tamanho={96}
+        />
+        <div className="ui-coluna" style={{ gap: 8 }}>
+          <input
+            ref={entrada}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            id={`foto-${produto.id}`}
+            onChange={(e) => escolher(e.target.files?.[0])}
+          />
+          <div className="ui-linha" style={{ gap: 8 }}>
+            <label
+              htmlFor={`foto-${produto.id}`}
+              className="sc-btn sc-btn--ghost"
+              aria-disabled={ocupado || undefined}
+              style={{ minHeight: 44 }}
+            >
+              <Icone nome="mais" tamanho={18} />
+              {produto.fotoVersao ? "Trocar foto" : "Escolher foto"}
+            </label>
+            {produto.fotoVersao && (
+              <Botao variante="fantasma" onClick={remover} disabled={ocupado}>
+                Remover
+              </Botao>
+            )}
+          </div>
+          <span className="ui-texto-sm ui-suave">
+            JPEG, PNG ou WebP. A foto é reduzida antes de enviar.
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 
