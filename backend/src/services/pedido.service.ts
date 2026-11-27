@@ -522,6 +522,12 @@ async function prepararPedido(
   if (dados.clienteId != null && !cliente) {
     throw new AppError(400, `Cliente ${dados.clienteId} não existe.`);
   }
+  if (cliente?.anonimizadoEm) {
+    throw new AppError(
+      409,
+      "Cliente anonimizado (LGPD) não recebe pedidos novos: cadastre-o de novo.",
+    );
+  }
 
   if (dados.mesaId != null) {
     const mesa = await tx.mesa.findUnique({ where: { id: dados.mesaId } });

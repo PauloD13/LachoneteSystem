@@ -5,6 +5,7 @@ import { InicialPorCargo } from "./InicialPorCargo";
 import { LayoutCelular } from "../components/layout/LayoutCelular";
 import { LayoutGerencia } from "../components/layout/LayoutGerencia";
 import { LoginPage } from "../pages/LoginPage";
+import { PrivacidadePage } from "../pages/PrivacidadePage";
 import { NaoEncontradaPage } from "../pages/NaoEncontradaPage";
 import { InicioPage } from "../pages/atendente/InicioPage";
 import { NovoPedidoPage } from "../pages/atendente/NovoPedidoPage";
@@ -47,6 +48,8 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* Públicas: o aviso de privacidade (LGPD) e a página 404. */}
+      <Route path="/privacidade" element={<PrivacidadePage />} />
 
       <Route element={<RotaProtegida />}>
         <Route index element={<InicialPorCargo />} />
@@ -95,9 +98,9 @@ export function AppRoutes() {
             <Route path="ajustes" element={<AjustesPage />} />
           </Route>
         </Route>
-
-        <Route path="*" element={<NaoEncontradaPage />} />
       </Route>
+
+      <Route path="*" element={<NaoEncontradaPage />} />
     </Routes>
   );
 }

@@ -38,6 +38,8 @@ export interface Cliente {
   enderecoPadraoCidade: string | null;
   enderecoPadraoCep: string | null;
   criadoEm: Instante;
+  /** Preenchido quando os dados pessoais foram apagados (LGPD). */
+  anonimizadoEm: Instante | null;
 }
 
 /** Cliente na listagem: com contadores de consumo. */
@@ -59,7 +61,7 @@ export interface ClienteDetalhado extends Cliente {
   };
 }
 
-export type ClienteEntrada = Omit<Cliente, "id" | "criadoEm">;
+export type ClienteEntrada = Omit<Cliente, "id" | "criadoEm" | "anonimizadoEm">;
 
 export interface Funcionario {
   id: number;

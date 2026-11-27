@@ -39,12 +39,19 @@ import type {
 
 type ComAtivo = ConsultaPaginada & { ativo?: boolean };
 
-export const clientes = criarRecurso<
-  ClienteResumido,
-  ClienteEntrada,
-  ConsultaPaginada & { busca?: string },
-  ClienteDetalhado
->("/clientes");
+export const clientes = {
+  ...criarRecurso<
+    ClienteResumido,
+    ClienteEntrada,
+    ConsultaPaginada & { busca?: string },
+    ClienteDetalhado
+  >("/clientes"),
+  /** LGPD: tudo o que o sistema guarda do cliente (cadastro e pedidos). */
+  exportarDados: (id: number) => api.get<unknown>(`/clientes/${id}/dados`),
+  /** LGPD: apaga os dados pessoais de quem já tem pedidos. */
+  anonimizar: (id: number) =>
+    api.post<ClienteDetalhado>(`/clientes/${id}/anonimizacao`),
+};
 
 export const funcionarios = criarRecurso<
   Funcionario,

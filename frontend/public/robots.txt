@@ -1,0 +1,5 @@
+# Lanchonete Sabor & Cia — sistema interno de pedidos.
+# Nada aqui é para buscadores: as telas exigem login e a API traz dados
+# pessoais (LGPD). O backend também envia "X-Robots-Tag: noindex, nofollow".
+User-agent: *
+Disallow: /

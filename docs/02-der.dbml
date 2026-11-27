@@ -25,6 +25,7 @@ Table cliente {
   endereco_padrao_cidade varchar
   endereco_padrao_cep varchar
   criado_em timestamptz [not null, default: `now()`]
+  anonimizado_em timestamptz [note: 'LGPD: dados pessoais apagados a pedido do titular; nulo = cadastro normal']
 
   Note: 'Cadastro obrigatório apenas p/ pedidos via app ou delivery (regra aplicada no backend, não no schema). Endereço aqui é só o "padrão" sugerido; o endereço real de cada entrega fica em entrega.*'
 }

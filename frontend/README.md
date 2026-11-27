@@ -35,24 +35,30 @@ O visual segue o design system **Sabor & Cia** (`styles/tokens.css` e
 `styles/bundle.css`, classes `sc-*`). Cada pessoa cai na tela do seu cargo ao
 entrar (gerente → atendente → cozinheiro → entregador, nessa prioridade).
 
-| Rota                                    | Tela                                        | Quem       |
-| --------------------------------------- | ------------------------------------------- | ---------- |
-| `/login`                                | Login                                       | todos      |
-| `/inicio`                               | Início do turno                             | atendente  |
-| `/pedidos/novo`                         | Novo pedido (+ folha do item)               | atendente  |
-| `/pedidos/novo/fechar`                  | Fechamento                                  | atendente  |
-| `/pedidos`, `/pedidos/:id`              | Lista e detalhe do pedido                   | todos      |
-| `/mesas`                                | Mesas (livres abrem pedido)                 | atendente  |
-| `/mais`, `/perfil`                      | Atalhos, tema, trocar senha, sair           | todos      |
-| `/clientes`                             | Clientes                                    | atendente  |
-| `/cozinha`                              | Cozinha (tablet, atualiza a cada 10 s)      | cozinheiro |
-| `/entregas`, `/entregas/historico`      | Minhas entregas e histórico                 | entregador |
-| `/gerencia/pedidos`                     | Pedidos (desktop)                           | gerente    |
-| `/gerencia/clientes`                    | Clientes com ficha e histórico              | gerente    |
-| `/gerencia/cardapio`                    | Produtos, combos, categorias, adicionais... | gerente    |
-| `/gerencia/estoque`                     | Ingredientes e fornecedores                 | gerente    |
-| `/gerencia/relatorios`                  | Mais vendidos, vendas, consumo              | gerente    |
-| `/gerencia/equipe`, `/gerencia/ajustes` | Funcionários e cargos; mesas, formas...     | gerente    |
+| Rota                                    | Tela                                       | Quem       |
+| --------------------------------------- | ------------------------------------------ | ---------- |
+| `/login`                                | Login                                      | todos      |
+| `/privacidade`                          | Aviso de privacidade (LGPD), sem login     | todos      |
+| `/inicio`                               | Início do turno                            | atendente  |
+| `/pedidos/novo`                         | Novo pedido (+ folha do item)              | atendente  |
+| `/pedidos/novo/fechar`                  | Fechamento                                 | atendente  |
+| `/pedidos`, `/pedidos/:id`              | Lista e detalhe do pedido                  | todos      |
+| `/mesas`                                | Mesas (livres abrem pedido)                | atendente  |
+| `/mais`, `/perfil`                      | Atalhos, tema, trocar senha, sair          | todos      |
+| `/clientes`                             | Clientes                                   | atendente  |
+| `/cozinha`                              | Cozinha (tablet, em tempo real)            | cozinheiro |
+| `/entregas`, `/entregas/historico`      | Minhas entregas e histórico                | entregador |
+| `/gerencia/pedidos`                     | Pedidos (desktop)                          | gerente    |
+| `/gerencia/clientes`                    | Clientes: ficha, histórico, dados (LGPD)   | gerente    |
+| `/gerencia/cardapio`                    | Produtos (com foto), combos, adicionais... | gerente    |
+| `/gerencia/estoque`                     | Ingredientes, mínimo e reposição; fornec.  | gerente    |
+| `/gerencia/relatorios`                  | Mais vendidos, vendas, consumo             | gerente    |
+| `/gerencia/equipe`, `/gerencia/ajustes` | Funcionários e cargos; mesas, formas...    | gerente    |
+| qualquer outro endereço                 | Página 404 ("não está no cardápio")        | todos      |
+
+Depois do login, cada um vai para a tela do seu cargo. Só quem teve a sessão
+expirada no meio do uso volta para a tela em que estava (e só a mesma
+pessoa): quem clica em "Sair" não deixa tela de retorno para o próximo.
 
 ## Estrutura
 
@@ -74,7 +80,7 @@ src/
 │   ├── layout/          # LayoutCelular (nav inferior), LayoutGerencia
 │   ├── pedido/          # folhas do item/cliente/mesa, cartão do pedido
 │   └── conta/           # tema e troca de senha
-├── services/            # TODA conversa com a API
+├── services/            # TODA conversa com a API (e a conexão de eventos)
 ├── hooks/               # useAuth, useConsulta, useAcao, useAvisos...
 ├── contexts/            # login, avisos (toasts) e carrinho
 ├── lib/                 # formatadores, status, montagem do pedido...
@@ -135,6 +141,16 @@ botões de salvar/excluir.
 **Status do pedido: `lib/status.ts`.** Cor (selo e listra), rótulo e a
 próxima ação de cada status ficam num lugar só.
 
+**Tempo real: `useAoVivo(recarregar)`.** As telas de operação recebem as
+mudanças de pedido por `GET /api/eventos` (Server-Sent Events). Todas dividem
+uma conexão só (`services/eventos.ts`), que reconecta sozinha; o hook devolve
+se ela está aberta, e a tela usa isso para consultar a API com menos
+frequência enquanto funciona.
+
+**Dados pessoais (LGPD).** Exportar e excluir os dados de um cliente ficam na
+ficha (só gerente). Ao mostrar dados de cliente, lembre que ele pode estar
+anonimizado: nome "Cliente anonimizado", sem telefone nem endereço.
+
 **Pedido em montagem: `useCarrinho()`.** Novo pedido, item e fechamento
 compartilham o carrinho (guardado na aba, sobrevive a recarregar). O
 fechamento pergunta o total ao backend (`POST /pedidos/simulacao`) a cada
@@ -151,3 +167,6 @@ erro com `role="alert"`.
    grupo de permissão certos.
 3. Adicione o link na navegação (`components/layout/LayoutCelular.tsx` ou
    `LayoutGerencia.tsx`).
+4. Se a rota começa com um trecho novo (ex.: `/caixa`), inclua-o em `TELAS`
+   no `backend/src/middlewares/frontend.ts`: endereço fora dessa lista recebe
+   status 404 no deploy.

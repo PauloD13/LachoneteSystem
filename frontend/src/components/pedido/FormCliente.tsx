@@ -145,6 +145,19 @@ export function FormCliente({
           ))}
         </div>
       </fieldset>
+      {/* LGPD, art. 9º: quem fornece os dados tem de saber para quê. */}
+      <p className="ui-texto-sm ui-suave">
+        Avise o cliente: estes dados servem para registrar e entregar os
+        pedidos, e ele pode pedir uma cópia ou a exclusão a qualquer momento.{" "}
+        <a
+          href="/privacidade"
+          target="_blank"
+          rel="noopener"
+          className="ui-link"
+        >
+          Aviso de privacidade
+        </a>
+      </p>
       <div className="ui-linha" style={{ justifyContent: "flex-end" }}>
         {aoCancelar && (
           <Botao variante="fantasma" onClick={aoCancelar} disabled={salvando}>

@@ -175,7 +175,10 @@ export function PedidoPage() {
           </div>
           {pedido.cliente && (
             <span style={{ font: "700 15px/20px var(--font-sans)" }}>
-              {pedido.cliente.nome} · {telefone(pedido.cliente.telefone)}
+              {pedido.cliente.nome}
+              {/* Cliente anonimizado (LGPD) fica sem telefone. */}
+              {pedido.cliente.telefone &&
+                ` · ${telefone(pedido.cliente.telefone)}`}
             </span>
           )}
           <span className="ui-texto-sm ui-suave">

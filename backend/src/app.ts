@@ -8,6 +8,7 @@ import { registrarRequisicao } from "./middlewares/registro.js";
 import {
   cabecalhosDeSeguranca,
   limiteGlobal,
+  semCacheNaApi,
 } from "./middlewares/seguranca.js";
 
 const app = express();
@@ -26,7 +27,7 @@ app.use(express.json({ limit: "100kb" }));
 //SECTION - rotas da API
 // Sob /api porque telas e API dividem o endereço: sem o prefixo, F5 na tela
 // /clientes devolveria o JSON de GET /clientes.
-app.use("/api", routes);
+app.use("/api", semCacheNaApi, routes);
 
 //SECTION - telas do frontend (quando compiladas)
 const frontend = pastaDoFrontend();
