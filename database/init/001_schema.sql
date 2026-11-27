@@ -37,7 +37,11 @@ CREATE TABLE cliente (
     endereco_padrao_bairro      VARCHAR(100),
     endereco_padrao_cidade      VARCHAR(100),
     endereco_padrao_cep         VARCHAR(9),
-    criado_em                   TIMESTAMPTZ NOT NULL DEFAULT now()
+    criado_em                   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- LGPD (art. 16 e 18, IV): quando o cliente pede a exclusão e já tem
+    -- pedidos, os dados pessoais são apagados (anonimizados) e o cadastro fica
+    -- só como referência dos pedidos, que a lanchonete precisa guardar.
+    anonimizado_em              TIMESTAMPTZ
 );
 
 -- -----------------------------------------------------------------------------

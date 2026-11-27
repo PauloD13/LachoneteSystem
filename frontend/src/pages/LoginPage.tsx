@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router";
+import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import { useAvisos } from "../hooks/useAvisos";
 import { ErroDaApi, mensagemDeErro } from "../services/api";
@@ -164,6 +164,11 @@ export function LoginPage() {
           </Botao>
           <p className={`${estilos.dica} ui-texto-sm ui-suave`}>
             Esqueceu a senha? Peça ao gerente para redefinir.
+          </p>
+          <p className={`${estilos.dica} ui-texto-sm ui-suave`}>
+            <Link to="/privacidade" className="ui-link">
+              Aviso de privacidade
+            </Link>
           </p>
         </form>
       </main>

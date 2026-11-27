@@ -33,3 +33,23 @@ export async function remover(req: Request, res: Response): Promise<void> {
   await clienteService.remover(id);
   res.status(204).send();
 }
+
+// LGPD: cópia de todos os dados do cliente (acesso e portabilidade).
+export async function exportarDados(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { id } = idParamSchema.parse(req.params);
+  const dados = await clienteService.exportarDados(id);
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="cliente-${id}-dados.json"`,
+  );
+  res.status(200).json(dados);
+}
+
+// LGPD: apaga os dados pessoais de quem já tem pedidos.
+export async function anonimizar(req: Request, res: Response): Promise<void> {
+  const { id } = idParamSchema.parse(req.params);
+  res.status(200).json(await clienteService.anonimizar(id));
+}

@@ -130,6 +130,14 @@ export function PerfilPage({ titulo = "Perfil" }: { titulo?: string }) {
             <Icone nome="chave" />
             Trocar minha senha
           </button>
+          <Link
+            to="/privacidade"
+            className="sc-btn sc-btn--ghost sc-btn--block"
+            style={{ justifyContent: "flex-start" }}
+          >
+            <Icone nome="olho" />
+            Aviso de privacidade (LGPD)
+          </Link>
           <button
             type="button"
             className="sc-btn sc-btn--ghost sc-btn--block"
