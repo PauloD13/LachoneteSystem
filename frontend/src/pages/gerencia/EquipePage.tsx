@@ -90,7 +90,7 @@ export function EquipePage() {
                 <span
                   className="ui-avatar"
                   aria-hidden="true"
-                  style={{ background: "var(--surface-100)" }}
+                  style={{ background: "var(--surface-inset)" }}
                 >
                   {inicial(f.nome)}
                 </span>

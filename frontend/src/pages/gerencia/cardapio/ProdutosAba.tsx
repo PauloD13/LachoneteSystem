@@ -470,7 +470,7 @@ function FichaTecnica({ produtoId }: { produtoId: number }) {
             minHeight: 40,
             padding: "0 12px",
             borderRadius: "var(--radius-md)",
-            background: "var(--surface-100)",
+            background: "var(--surface-inset)",
             font: "600 15px/20px var(--font-sans)",
           }}
         >

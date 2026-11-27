@@ -287,7 +287,7 @@ function Ficha({ id, aoEditar }: { id: number; aoEditar(c: Cliente): void }) {
                 minHeight: 44,
                 padding: "0 12px",
                 borderRadius: "var(--radius-md)",
-                background: "var(--surface-100)",
+                background: "var(--surface-inset)",
                 color: "var(--ink)",
                 textDecoration: "none",
               }}

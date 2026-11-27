@@ -293,7 +293,7 @@ export function PedidoPage() {
               </span>
               <Botao
                 variante="fantasma"
-                style={{ background: "var(--surface-100)", minHeight: 40 }}
+                style={{ background: "var(--surface-inset)", minHeight: 40 }}
                 onClick={() => setRecebendo(true)}
               >
                 <Icone nome="dinheiro" tamanho={18} />
@@ -540,7 +540,7 @@ function Entrega({
           <span
             className="ui-avatar"
             aria-hidden="true"
-            style={{ background: "var(--surface-100)" }}
+            style={{ background: "var(--surface-inset)" }}
           >
             {inicial(entrega.entregador.nome)}
           </span>

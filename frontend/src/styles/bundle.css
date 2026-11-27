@@ -89,6 +89,14 @@
   box-shadow: none;
   transform: none;
 }
+/* No claro, meia opacidade sobre o laranja vira salmão e some no fundo:
+   desativado fica cinza sólido, com texto legível. */
+[data-theme="light"] .sc-btn[disabled],
+[data-theme="light"] .sc-btn[aria-disabled="true"] {
+  opacity: 1;
+  background: var(--surface-300);
+  color: var(--ink-muted);
+}
 
 /* ---------- Input ---------- */
 .sc-field {
@@ -182,8 +190,8 @@
   box-shadow: var(--shadow-sm);
 }
 .sc-chip[aria-pressed="true"] {
-  background: var(--surface-100);
-  color: var(--ink);
+  background: var(--chip-selected-bg);
+  color: var(--chip-selected-fg);
   font-weight: 800;
   box-shadow: none;
 }

@@ -333,7 +333,7 @@ a.sc-btn {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4) 20px 20px;
-  box-shadow: 0 -6px 12px -8px rgba(40, 28, 18, 0.18);
+  box-shadow: 0 -6px 12px -8px rgba(24, 24, 22, 0.18);
 }
 /* Em telas largas a folha vira um diálogo central. */
 @media (min-width: 720px) {
@@ -383,6 +383,7 @@ a.sc-btn {
 }
 .ui-opcao:has(input:checked) {
   background: var(--surface-100);
+  box-shadow: inset 0 0 0 2px var(--selected-ring);
 }
 .ui-opcao input {
   width: 22px;
@@ -455,7 +456,7 @@ a.sc-btn {
 }
 .ui-tabela td {
   padding: 12px;
-  background: var(--surface-100);
+  background: var(--surface-inset);
 }
 .ui-tabela td:first-child {
   border-radius: 12px 0 0 12px;
@@ -529,7 +530,7 @@ a.sc-ticket:hover {
   cursor: pointer;
 }
 .ui-abas > button[aria-selected="true"] {
-  background: var(--surface-100);
+  background: var(--surface-selected);
   color: var(--ink);
   box-shadow: var(--shadow-sm);
 }

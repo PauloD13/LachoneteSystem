@@ -1,12 +1,12 @@
 /* Sabor & Cia — generated from tokens.json */
 :root,
 [data-theme="light"] {
-  --surface-100: #fff8f0;
-  --surface-200: #f2efeb;
-  --surface-300: #e6e1db;
-  --ink: #1f140c;
-  --ink-muted: #5c4636;
-  --line-strong: #9c8572;
+  --surface-100: #f2f2ef;
+  --surface-200: #ffffff;
+  --surface-300: #dcdbd6;
+  --ink: #1c1b19;
+  --ink-muted: #55514c;
+  --line-strong: #85817b;
   --brand: #c2410c;
   --brand-hover: #9a3412;
   --on-brand: #ffffff;
@@ -28,11 +28,16 @@
   --status-cancelado-bg: #b42318;
   --status-cancelado-fg: #ffffff;
   --danger-text: #b42318;
-  --shadow-sm: 0 1px 2px rgba(40, 28, 18, 0.12);
+  --chip-selected-bg: #1c1b19;
+  --chip-selected-fg: #ffffff;
+  --surface-inset: #e9e8e4;
+  --selected-ring: #1c1b19;
+  --surface-selected: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(24, 24, 22, 0.14);
   --shadow-card:
-    0 2px 3px rgba(40, 28, 18, 0.1), 0 4px 10px -4px rgba(40, 28, 18, 0.14);
+    0 1px 3px rgba(24, 24, 22, 0.1), 0 4px 12px -4px rgba(24, 24, 22, 0.16);
   --shadow-pop:
-    0 4px 6px rgba(40, 28, 18, 0.1), 0 10px 20px -6px rgba(40, 28, 18, 0.18);
+    0 4px 6px rgba(24, 24, 22, 0.1), 0 10px 20px -6px rgba(24, 24, 22, 0.2);
 }
 [data-theme="dark"] {
   --surface-100: #17120e;
@@ -62,6 +67,11 @@
   --status-cancelado-bg: #d0574a;
   --status-cancelado-fg: #17120e;
   --danger-text: #ff9e8f;
+  --chip-selected-bg: #17120e;
+  --chip-selected-fg: #fbf3ea;
+  --surface-inset: #17120e;
+  --selected-ring: transparent;
+  --surface-selected: #17120e;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
   --shadow-card:
     0 2px 3px rgba(0, 0, 0, 0.4), 0 4px 10px -4px rgba(0, 0, 0, 0.5);
